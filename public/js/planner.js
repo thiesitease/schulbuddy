@@ -9,8 +9,9 @@
 // (Spaced Repetition), am letzten Lerntag vor der Prüfung eine Generalprobe.
 
 import { addDays, diffDays, weekdayMon0 } from './dates.js';
+import { t } from './i18n.js';
 
-export const KIND_LABEL = { learn: 'Lernen', review: 'Wiederholen', final: 'Generalprobe' };
+export const KIND_LABEL = { learn: t('Lernen'), review: t('Wiederholen'), final: t('Generalprobe') };
 
 const DIFFICULTY_FACTOR = { 1: 0.8, 2: 1, 3: 1.4 };
 // So viele Minuten darf ein Tag überzogen werden, bevor eine Einheit auf später rutscht.
@@ -23,7 +24,7 @@ const round5 = (n) => Math.max(5, Math.round(n / 5) * 5);
 export function topicsFor(exam) {
   if (exam.topics?.length) return exam.topics;
   const n = { 1: 2, 2: 3, 3: 4 }[exam.difficulty] ?? 3;
-  return Array.from({ length: n }, (_, i) => ({ id: `teil${i + 1}`, name: `Stoff Teil ${i + 1}` }));
+  return Array.from({ length: n }, (_, i) => ({ id: `teil${i + 1}`, name: t('Stoff Teil {n}', { n: i + 1 }) }));
 }
 
 export function examTasks(exam, settings) {
@@ -31,12 +32,12 @@ export function examTasks(exam, settings) {
   const learn = round5(base * (DIFFICULTY_FACTOR[exam.difficulty] ?? 1));
   const review = round5(learn * 0.6);
   const tasks = [];
-  for (const t of topicsFor(exam)) {
-    const learnKey = `${exam.id}:learn:${t.id}`;
-    tasks.push({ key: learnKey, examId: exam.id, kind: 'learn', topic: t.name, minutes: learn });
-    tasks.push({ key: `${exam.id}:review:${t.id}`, examId: exam.id, kind: 'review', topic: t.name, minutes: review, after: learnKey });
+  for (const topic of topicsFor(exam)) {
+    const learnKey = `${exam.id}:learn:${topic.id}`;
+    tasks.push({ key: learnKey, examId: exam.id, kind: 'learn', topic: topic.name, minutes: learn });
+    tasks.push({ key: `${exam.id}:review:${topic.id}`, examId: exam.id, kind: 'review', topic: topic.name, minutes: review, after: learnKey });
   }
-  tasks.push({ key: `${exam.id}:final`, examId: exam.id, kind: 'final', topic: 'Alle Themen', minutes: round5(Math.max(20, base)) });
+  tasks.push({ key: `${exam.id}:final`, examId: exam.id, kind: 'final', topic: t('Alle Themen'), minutes: round5(Math.max(20, base)) });
   return tasks;
 }
 

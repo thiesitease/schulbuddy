@@ -4,6 +4,7 @@ import { html, icon, LOGO, toast } from './ui.js';
 import { syncReminders } from './reminders.js';
 import { initPWA, onInstallChange } from './pwa.js';
 import { initAccount, onAccountChange, rememberProviderName } from './account.js';
+import { t, privacyUrl, imprintUrl } from './i18n.js';
 import onboarding from './views/onboarding.js';
 import today from './views/today.js';
 import plan from './views/plan.js';
@@ -15,29 +16,31 @@ import premium from './views/premium.js';
 
 const ROUTES = { today, plan, learn, buddy, progress, settings, premium };
 const TABS = [
-  { id: 'today', label: 'Heute', icon: 'home' },
-  { id: 'plan', label: 'Planer', icon: 'calendar' },
-  { id: 'learn', label: 'Lernen', icon: 'cards' },
+  { id: 'today', label: t('Heute'), icon: 'home' },
+  { id: 'plan', label: t('Planer'), icon: 'calendar' },
+  { id: 'learn', label: t('Lernen'), icon: 'cards' },
   { id: 'buddy', label: 'Buddy', icon: 'sparkles' },
-  { id: 'progress', label: 'Fortschritt', icon: 'chart' },
+  { id: 'progress', label: t('Fortschritt'), icon: 'chart' },
 ];
+
+document.title = t('SchoolBuddy – Deine Schule. Dein Plan. Dein Erfolg.');
 
 const app = document.getElementById('app');
 app.innerHTML = String(html`
   <header class="topbar">
-    <a class="brand" href="#/today" aria-label="SchoolBuddy – zur Startseite">${LOGO}<span>SchoolBuddy</span></a>
-    <span class="offline-pill" hidden>${icon('info')} Offline</span>
-    <nav class="topbar-actions" aria-label="Weitere">
-      <a class="icon-btn" href="#/settings" aria-label="Einstellungen">${icon('sliders')}</a>
+    <a class="brand" href="#/today" aria-label="${t('SchoolBuddy – zur Startseite')}">${LOGO}<span>SchoolBuddy</span></a>
+    <span class="offline-pill" hidden>${icon('info')} ${t('Offline')}</span>
+    <nav class="topbar-actions" aria-label="${t('Weitere')}">
+      <a class="icon-btn" href="#/settings" aria-label="${t('Einstellungen')}">${icon('sliders')}</a>
     </nav>
   </header>
   <main id="view" class="view" tabindex="-1"></main>
   <footer class="app-footer">
     <p>© 2026 Julius Reinhold, Hamburg</p>
-    <p><a href="impressum.html">Impressum</a> · <a href="datenschutz.html">Datenschutz</a></p>
+    <p><a href="${imprintUrl()}">${t('Impressum')}</a> · <a href="${privacyUrl()}">${t('Datenschutz')}</a></p>
   </footer>
-  <nav class="tabbar" aria-label="Hauptnavigation">
-    ${TABS.map((t) => html`<a href="#/${t.id}" data-tab="${t.id}">${icon(t.icon)}<span>${t.label}</span></a>`)}
+  <nav class="tabbar" aria-label="${t('Hauptnavigation')}">
+    ${TABS.map((tab) => html`<a href="#/${tab.id}" data-tab="${tab.id}">${icon(tab.icon)}<span>${tab.label}</span></a>`)}
   </nav>
 `);
 
@@ -88,9 +91,9 @@ export function render() {
     cleanup = v.render(view, ctx) || null;
   } catch (err) {
     console.error(err);
-    view.innerHTML = String(html`<div class="empty">${icon('alert')}<h3>Da ist etwas schiefgelaufen</h3>
-      <p>Lade die Seite neu. Deine Daten sind sicher auf deinem Gerät gespeichert.</p>
-      <a class="btn primary" href="./">Neu laden</a></div>`);
+    view.innerHTML = String(html`<div class="empty">${icon('alert')}<h3>${t('Da ist etwas schiefgelaufen')}</h3>
+      <p>${t('Lade die Seite neu. Deine Daten sind sicher auf deinem Gerät gespeichert.')}</p>
+      <a class="btn primary" href="./">${t('Neu laden')}</a></div>`);
   }
   if (changed) {
     window.scrollTo(0, 0);
@@ -106,7 +109,7 @@ function updateOnline() {
   app.querySelector('.offline-pill').hidden = navigator.onLine;
 }
 
-onSaveError(() => toast('Speichern fehlgeschlagen. Ist der Gerätespeicher voll?', { timeout: 6000 }));
+onSaveError(() => toast(t('Speichern fehlgeschlagen. Ist der Gerätespeicher voll?'), { timeout: 6000 }));
 onInstallChange(() => {
   if (['today', 'settings'].includes(parseHash().name)) render();
 });
@@ -122,12 +125,12 @@ document.addEventListener('visibilitychange', () => {
 
 // Rückkehr vom Login (…/#/settings?login=ok oder ein Fehlercode).
 const LOGIN_MESSAGES = {
-  ok: 'Angemeldet ✓ Deine Daten werden jetzt synchronisiert.',
-  abgebrochen: 'Anmeldung abgebrochen.',
-  abgelaufen: 'Die Anmeldung hat zu lange gedauert. Versuch es noch einmal.',
-  ungueltig: 'Die Anmeldung konnte nicht bestätigt werden. Versuch es noch einmal.',
-  deaktiviert: 'Diese Anmeldung ist gerade nicht verfügbar.',
-  fehler: 'Die Anmeldung hat nicht geklappt. Versuch es später noch einmal.',
+  ok: t('Angemeldet ✓ Deine Daten werden jetzt synchronisiert.'),
+  abgebrochen: t('Anmeldung abgebrochen.'),
+  abgelaufen: t('Die Anmeldung hat zu lange gedauert. Versuch es noch einmal.'),
+  ungueltig: t('Die Anmeldung konnte nicht bestätigt werden. Versuch es noch einmal.'),
+  deaktiviert: t('Diese Anmeldung ist gerade nicht verfügbar.'),
+  fehler: t('Die Anmeldung hat nicht geklappt. Versuch es später noch einmal.'),
 };
 const loginQuery = parseHash().query;
 const loginResult = loginQuery.get('login');
@@ -147,7 +150,7 @@ onAccountChange((kind) => {
 initPWA();
 updateOnline();
 if (booting) {
-  view.innerHTML = String(html`<div class="splash">${LOGO}<p>Anmeldung wird abgeschlossen …</p></div>`);
+  view.innerHTML = String(html`<div class="splash">${LOGO}<p>${t('Anmeldung wird abgeschlossen …')}</p></div>`);
   try {
     await initAccount();
   } finally {

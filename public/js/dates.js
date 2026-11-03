@@ -1,8 +1,12 @@
 // Datums-Helfer. Alle Tage werden als lokale ISO-Strings 'YYYY-MM-DD' gespeichert,
 // damit Vergleiche per String funktionieren und keine Zeitzonen-Fehler entstehen.
+import { t, getLang, locale } from './i18n.js';
 
-export const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-export const WEEKDAYS_LONG = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+const EN = getLang() === 'en';
+export const WEEKDAYS = EN ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+export const WEEKDAYS_LONG = EN
+  ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  : ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 
 export const pad = (n) => String(n).padStart(2, '0');
 
@@ -55,9 +59,9 @@ export function isValidISO(s) {
   return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && toISO(parseISO(s)) === s;
 }
 
-const fmtShort = new Intl.DateTimeFormat('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
-const fmtLong = new Intl.DateTimeFormat('de-DE', { weekday: 'long', day: 'numeric', month: 'long' });
-const fmtDay = new Intl.DateTimeFormat('de-DE', { day: 'numeric', month: 'numeric' });
+const fmtShort = new Intl.DateTimeFormat(locale(), { weekday: 'short', day: 'numeric', month: 'short' });
+const fmtLong = new Intl.DateTimeFormat(locale(), { weekday: 'long', day: 'numeric', month: 'long' });
+const fmtDay = new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'numeric' });
 
 export function fmtDate(s, style = 'short') {
   const d = parseISO(s);
@@ -69,18 +73,18 @@ export function fmtDate(s, style = 'short') {
 /** „heute“, „morgen“, „in 5 Tagen“, „vor 2 Tagen“ … */
 export function relDay(s, today) {
   const n = diffDays(today, s);
-  if (n === 0) return 'heute';
-  if (n === 1) return 'morgen';
-  if (n === 2) return 'übermorgen';
-  if (n === -1) return 'gestern';
-  if (n > 0) return `in ${n} Tagen`;
-  return `vor ${-n} Tagen`;
+  if (n === 0) return t('heute');
+  if (n === 1) return t('morgen');
+  if (n === 2) return t('übermorgen');
+  if (n === -1) return t('gestern');
+  if (n > 0) return t('in {n} Tagen', { n });
+  return t('vor {n} Tagen', { n: -n });
 }
 
 /** Tageskopf für Listen: „Heute“, „Morgen“ oder „Mi, 5. Nov.“ */
 export function dayTitle(s, today) {
   const n = diffDays(today, s);
-  if (n === 0) return 'Heute';
-  if (n === 1) return 'Morgen';
+  if (n === 0) return t('Heute');
+  if (n === 1) return t('Morgen');
   return fmtDate(s);
 }

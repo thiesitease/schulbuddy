@@ -76,6 +76,18 @@ function fail(int $status, string $message, array $extra = []): never
     respond($status, ['ok' => false, 'error' => $message] + $extra);
 }
 
+/** Sprache der App ('de' oder 'en'). Die App schickt sie im Header X-SchulBuddy-Lang mit. */
+function app_lang(): string
+{
+    return ($_SERVER['HTTP_X_SCHULBUDDY_LANG'] ?? '') === 'en' ? 'en' : 'de';
+}
+
+/** Meldung in der Sprache der App. */
+function tr(string $de, string $en): string
+{
+    return app_lang() === 'en' ? $en : $de;
+}
+
 /** Kürzt UTF-8-sicher. */
 function cut(string $text, int $max): string
 {
@@ -108,7 +120,7 @@ function require_same_origin(array $config): void
     $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
     $allowed = array_merge([own_origin(), app_url($config)], (array) $config['allowed_origins']);
     if ($origin === '' || !in_array($origin, $allowed, true)) {
-        fail(403, 'Diese Anfrage ist nicht erlaubt.');
+        fail(403, tr('Diese Anfrage ist nicht erlaubt.', 'This request is not allowed.'));
     }
 }
 
@@ -147,11 +159,11 @@ function sb_secret(array $config): string
 function read_json_body(int $maxBytes, bool $assoc = true): array|stdClass
 {
     if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > $maxBytes) {
-        fail(413, 'Die Anfrage ist zu groß.');
+        fail(413, tr('Die Anfrage ist zu groß.', 'The request is too large.'));
     }
     $data = json_decode((string) file_get_contents('php://input'), $assoc);
     if (!is_array($data) && !$data instanceof stdClass) {
-        fail(400, 'Ungültige Anfrage.');
+        fail(400, tr('Ungültige Anfrage.', 'Invalid request.'));
     }
     return $data;
 }

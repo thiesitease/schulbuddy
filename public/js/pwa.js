@@ -1,5 +1,6 @@
 // Service Worker, Updates und Installations-Hinweis.
 import { toast } from './ui.js';
+import { t } from './i18n.js';
 
 let deferredPrompt = null;
 const listeners = new Set();
@@ -35,7 +36,7 @@ export function initPWA() {
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     notify();
-    toast('SchoolBuddy ist jetzt installiert 🎉');
+    toast(t('SchoolBuddy ist jetzt installiert 🎉'));
   });
 
   if (!('serviceWorker' in navigator)) return;
@@ -56,8 +57,8 @@ export function initPWA() {
       const offerUpdate = () => {
         if (offered) return;
         offered = true;
-        toast('Eine neue Version von SchoolBuddy ist da.', {
-          action: 'Aktualisieren',
+        toast(t('Eine neue Version von SchoolBuddy ist da.'), {
+          action: t('Aktualisieren'),
           timeout: 0,
           onAction: () => (reg.waiting ? reg.waiting.postMessage('skipWaiting') : location.reload()),
         });

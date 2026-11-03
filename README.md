@@ -19,6 +19,7 @@ Ziel-Adresse: **https://schoolbuddy.hamburgrissen.de** (Hosting: manitu)
 | Digital Flashcards | Karteikasten mit 5 Fächern; KI erstellt Karten aus Lernzettel (Text oder Foto) |
 | Goal Setting | Wochen-/Monatsziele (Minuten, Einheiten, Karten, Quizze oder eigenes Ziel) |
 | Konto (optional) | Anmeldung über Microsoft, Google oder Apple; Lerndaten werden zwischen Geräten abgeglichen, mit Konfliktabfrage. Der Chatverlauf bleibt auf dem Gerät. |
+| Sprache | Deutsch und Englisch, umschaltbar auf dem Startbildschirm und in den Einstellungen (pro Gerät). Buddy antwortet in der gewählten Sprache. |
 | Premium | Preisseite (2,99 €/Monat, 19,99 €/Jahr) unter `#/premium`, nirgends verlinkt, bis die Bezahlung aktiv ist |
 
 Ohne Konto bleiben alle Lerndaten im Browser des Geräts. Sicherung/Wiederherstellung als JSON in den Einstellungen.
@@ -52,6 +53,10 @@ Startet die App auf http://localhost:5173 mit Testantworten statt echter KI (ohn
 ```bash
 npm test
 ```
+
+`npm test` prüft auch die Übersetzung: Die deutschen Texte stehen im Code in `t('…')` und sind zugleich die
+Schlüssel für `public/js/i18n/en.js`. Fehlt dort ein Text oder stimmen die Platzhalter nicht, schlägt der Test fehl.
+Die Rechtstexte gibt es auf Englisch als `privacy.html` und `legal-notice.html`, verbindlich bleibt die deutsche Fassung.
 
 Die API-Tests (Login über einen Test-Anmeldeanbieter, Synchronisierung, KI-Proxy gegen eine Test-Claude-API)
 brauchen PHP 8.1+ mit curl, openssl, mbstring und pdo_sqlite:

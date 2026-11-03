@@ -1,20 +1,24 @@
 // Lernen: Karteikarten (Leitner) und Quiz (KI oder aus Karteikarten).
 import { getState, update, uid, logActivity } from '../store.js';
 import { todayISO } from '../dates.js';
-import { html, icon, ring, toast, openModal, confirmDialog, subjectDot, plural, resizeImage, bar } from '../ui.js';
+import { html, icon, ring, toast, openModal, confirmDialog, subjectDot, resizeImage, bar } from '../ui.js';
 import { tabs, pageHead, emptyState, sectionHead } from '../components.js';
 import { subjectOptions } from '../forms.js';
 import { dueCards, rateCard, MAX_BOX } from '../srs.js';
 import { askAI, ensureConsent } from '../ai.js';
 import { topicScores } from '../stats.js';
+import { t, subjectName } from '../i18n.js';
 
 const TABS = [
-  { id: 'cards', label: 'Karteikarten', href: '#/learn' },
-  { id: 'quiz', label: 'Quiz', href: '#/learn/quiz' },
+  { id: 'cards', label: t('Karteikarten'), href: '#/learn' },
+  { id: 'quiz', label: t('Quiz'), href: '#/learn/quiz' },
 ];
 
 let review = null; // laufende Wiederholung
 let quiz = null; // laufendes Quiz
+
+// Eigene Texte statt plural(): „Karte“ allein ist auch die Beschriftung eines Knopfes.
+const cardCount = (n) => (n === 1 ? t('1 Karte') : t('{n} Karten', { n }));
 
 const shuffle = (arr) => {
   const a = [...arr];
@@ -43,17 +47,17 @@ function renderDecks(root, ctx) {
   const today = todayISO();
   const due = s.decks.reduce((n, d) => n + dueCards(d, today).length, 0);
   root.innerHTML = String(html`
-    ${pageHead('Lernen')}${tabs(TABS, 'cards')}
+    ${pageHead(t('Lernen'))}${tabs(TABS, 'cards')}
     ${due ? html`<div class="card highlight row between">
-      <div><strong>${plural(due, 'Karte', 'Karten')} fällig</strong><p class="small">Wiederhole sie jetzt, dann bleibt alles im Kopf.</p></div>
-      <a class="btn light" href="#/learn/review/all">${icon('play')} Los</a></div>` : ''}
+      <div><strong>${t('{cards} fällig', { cards: cardCount(due) })}</strong><p class="small">${t('Wiederhole sie jetzt, dann bleibt alles im Kopf.')}</p></div>
+      <a class="btn light" href="#/learn/review/all">${icon('play')} ${t('Los')}</a></div>` : ''}
     <div class="row wrap gap">
-      <button type="button" class="btn primary" data-action="new-deck">${icon('plus')} Neuer Stapel</button>
-      <button type="button" class="btn ghost" data-action="ai-cards">${icon('sparkles')} Aus Lernzettel erstellen</button>
+      <button type="button" class="btn primary" data-action="new-deck">${icon('plus')} ${t('Neuer Stapel')}</button>
+      <button type="button" class="btn ghost" data-action="ai-cards">${icon('sparkles')} ${t('Aus Lernzettel erstellen')}</button>
     </div>
     ${s.decks.length
       ? html`<div class="stack-sm section">${s.decks.map((d) => deckRow(d, today))}</div>`
-      : emptyState('cards', 'Noch keine Karteikarten', 'Leg einen Stapel an oder lass die KI aus deinem Lernzettel Karteikarten erstellen. Wiederholt wird nach dem Karteikasten-Prinzip: Was du weißt, kommt seltener dran.')}
+      : emptyState('cards', t('Noch keine Karteikarten'), t('Leg einen Stapel an oder lass die KI aus deinem Lernzettel Karteikarten erstellen. Wiederholt wird nach dem Karteikasten-Prinzip: Was du weißt, kommt seltener dran.'))}
   `);
   root.onclick = (e) => {
     const a = e.target.closest('[data-action]');
@@ -68,8 +72,8 @@ function deckRow(d, today) {
   const counts = Array.from({ length: MAX_BOX }, (_, i) => d.cards.filter((c) => (c.box || 1) === i + 1).length);
   return html`<a class="deck" href="#/learn/deck/${d.id}">
     <span class="deck-main"><span class="deck-title">${subjectDot(d.subject)}${d.name}</span>
-      <span class="muted small">${d.subject} · ${plural(d.cards.length, 'Karte', 'Karten')}${due ? ` · ${due} fällig` : ''}</span>
-      ${d.cards.length ? html`<span class="boxes" aria-label="Verteilung auf die Fächer 1 bis 5">${counts.map((n, i) => html`<span style="flex:${n || 0.001}" class="box-${i + 1}" title="Fach ${i + 1}: ${n}"></span>`)}</span>` : ''}
+      <span class="muted small">${subjectName(d.subject)} · ${cardCount(d.cards.length)}${due ? ` · ${t('{n} fällig', { n: due })}` : ''}</span>
+      ${d.cards.length ? html`<span class="boxes" aria-label="${t('Verteilung auf die Fächer 1 bis 5')}">${counts.map((n, i) => html`<span style="flex:${n || 0.001}" class="box-${i + 1}" title="${t('Fach {box}: {n}', { box: i + 1, n })}"></span>`)}</span>` : ''}
     </span>
     ${due ? html`<span class="badge accent">${due}</span>` : ''}${icon('right', 'chev')}
   </a>`;
@@ -78,13 +82,13 @@ function deckRow(d, today) {
 function openDeckForm(deck, onSaved) {
   const isNew = !deck;
   openModal({
-    title: isNew ? 'Neuer Stapel' : 'Stapel bearbeiten',
+    title: isNew ? t('Neuer Stapel') : t('Stapel bearbeiten'),
     body: html`<form class="stack">
-      <label class="field"><span>Name</span><input name="name" value="${deck?.name || ''}" required maxlength="60" placeholder="z. B. Englisch Unit 3 Vokabeln" autofocus></label>
-      <label class="field"><span>Fach</span><select name="subject">${subjectOptions(deck?.subject || getState().profile.subjects[0])}</select></label>
+      <label class="field"><span>${t('Name')}</span><input name="name" value="${deck?.name || ''}" required maxlength="60" placeholder="${t('z. B. Englisch Unit 3 Vokabeln')}" autofocus></label>
+      <label class="field"><span>${t('Fach')}</span><select name="subject">${subjectOptions(deck?.subject || getState().profile.subjects[0])}</select></label>
       <div class="row end">
-        ${isNew ? '' : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} Löschen</button>`}
-        <button class="btn primary">Speichern</button></div>
+        ${isNew ? '' : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} ${t('Löschen')}</button>`}
+        <button class="btn primary">${t('Speichern')}</button></div>
     </form>`,
     onMount(m, close) {
       const form = m.querySelector('form');
@@ -108,9 +112,9 @@ function openDeckForm(deck, onSaved) {
       });
       m.querySelector('[data-delete]')?.addEventListener('click', async () => {
         close();
-        if (await confirmDialog(`Den Stapel „${deck.name}“ mit ${plural(deck.cards.length, 'Karte', 'Karten')} löschen?`)) {
+        if (await confirmDialog(t('Den Stapel „{name}“ mit {cards} löschen?', { name: deck.name, cards: cardCount(deck.cards.length) }))) {
           update((s) => { s.decks = s.decks.filter((x) => x.id !== deck.id); });
-          toast('Stapel gelöscht');
+          toast(t('Stapel gelöscht'));
           location.hash = '#/learn';
         }
       });
@@ -125,30 +129,30 @@ function renderDeck(root, ctx, id) {
   const s = getState();
   const deck = s.decks.find((d) => d.id === id);
   if (!deck) {
-    root.innerHTML = String(emptyState('cards', 'Stapel nicht gefunden', 'Vielleicht wurde er gelöscht.', html`<a class="btn primary" href="#/learn">Zur Übersicht</a>`));
+    root.innerHTML = String(emptyState('cards', t('Stapel nicht gefunden'), t('Vielleicht wurde er gelöscht.'), html`<a class="btn primary" href="#/learn">${t('Zur Übersicht')}</a>`));
     return;
   }
   const today = todayISO();
   const due = dueCards(deck, today).length;
   root.innerHTML = String(html`
-    <a class="back" href="#/learn">${icon('left')} Alle Stapel</a>
-    ${pageHead(deck.name, `${deck.subject} · ${plural(deck.cards.length, 'Karte', 'Karten')}`, html`<button type="button" class="icon-btn" data-action="edit-deck" aria-label="Stapel bearbeiten">${icon('edit')}</button>`)}
+    <a class="back" href="#/learn">${icon('left')} ${t('Alle Stapel')}</a>
+    ${pageHead(deck.name, `${subjectName(deck.subject)} · ${cardCount(deck.cards.length)}`, html`<button type="button" class="icon-btn" data-action="edit-deck" aria-label="${t('Stapel bearbeiten')}">${icon('edit')}</button>`)}
     <div class="grid-2 section">
-      <a class="btn primary ${deck.cards.length ? '' : 'disabled'}" href="#/learn/review/${deck.id}" ${deck.cards.length ? '' : html`aria-disabled="true" tabindex="-1"`}>${icon('play')} ${due ? `${due} fällige lernen` : 'Üben'}</a>
-      <button type="button" class="btn ghost" data-action="deck-quiz" ${deck.cards.length >= 4 ? '' : 'disabled'}>${icon('target')} Quiz</button>
+      <a class="btn primary ${deck.cards.length ? '' : 'disabled'}" href="#/learn/review/${deck.id}" ${deck.cards.length ? '' : html`aria-disabled="true" tabindex="-1"`}>${icon('play')} ${due ? t('{n} fällige lernen', { n: due }) : t('Üben')}</a>
+      <button type="button" class="btn ghost" data-action="deck-quiz" ${deck.cards.length >= 4 ? '' : 'disabled'}>${icon('target')} ${t('Quiz')}</button>
     </div>
     <div class="row wrap gap">
-      <button type="button" class="btn ghost sm" data-action="add-card">${icon('plus')} Karte</button>
-      <button type="button" class="btn ghost sm" data-action="ai-cards">${icon('sparkles')} Aus Lernzettel</button>
+      <button type="button" class="btn ghost sm" data-action="add-card">${icon('plus')} ${t('Karte')}</button>
+      <button type="button" class="btn ghost sm" data-action="ai-cards">${icon('sparkles')} ${t('Aus Lernzettel')}</button>
     </div>
-    ${deck.cards.length < 4 && deck.cards.length ? html`<p class="muted small">Ab 4 Karten kannst du ein Quiz daraus machen.</p>` : ''}
+    ${deck.cards.length < 4 && deck.cards.length ? html`<p class="muted small">${t('Ab 4 Karten kannst du ein Quiz daraus machen.')}</p>` : ''}
     ${deck.cards.length
       ? html`<ul class="list section">${deck.cards.map((c) => html`<li class="card-row">
           <button type="button" class="card-row-main" data-action="edit-card" data-id="${c.id}">
             <span class="card-front">${c.front}</span><span class="card-back muted">${c.back}</span></button>
-          <span class="box-badge box-${c.box || 1}" title="Fach ${c.box || 1} von ${MAX_BOX}">${c.box || 1}</span>
+          <span class="box-badge box-${c.box || 1}" title="${t('Fach {box} von {max}', { box: c.box || 1, max: MAX_BOX })}">${c.box || 1}</span>
         </li>`)}</ul>`
-      : emptyState('cards', 'Der Stapel ist leer', 'Füge Karten hinzu: vorne die Frage oder der Begriff, hinten die Antwort.')}
+      : emptyState('cards', t('Der Stapel ist leer'), t('Füge Karten hinzu: vorne die Frage oder der Begriff, hinten die Antwort.'))}
   `);
   root.onclick = (e) => {
     const a = e.target.closest('[data-action]');
@@ -168,13 +172,13 @@ function renderDeck(root, ctx, id) {
 function openCardForm(deck, card, onSaved) {
   const isNew = !card;
   openModal({
-    title: isNew ? 'Neue Karte' : 'Karte bearbeiten',
+    title: isNew ? t('Neue Karte') : t('Karte bearbeiten'),
     body: html`<form class="stack">
-      <label class="field"><span>Vorderseite (Frage oder Begriff)</span><textarea name="front" rows="2" required maxlength="300" autofocus>${card?.front || ''}</textarea></label>
-      <label class="field"><span>Rückseite (Antwort)</span><textarea name="back" rows="3" required maxlength="600">${card?.back || ''}</textarea></label>
+      <label class="field"><span>${t('Vorderseite (Frage oder Begriff)')}</span><textarea name="front" rows="2" required maxlength="300" autofocus>${card?.front || ''}</textarea></label>
+      <label class="field"><span>${t('Rückseite (Antwort)')}</span><textarea name="back" rows="3" required maxlength="600">${card?.back || ''}</textarea></label>
       <div class="row end">
-        ${isNew ? html`<label class="check-row small"><input type="checkbox" name="again" checked> <span>Danach weitere Karte</span></label>` : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} Löschen</button>`}
-        <button class="btn primary">Speichern</button></div>
+        ${isNew ? html`<label class="check-row small"><input type="checkbox" name="again" checked> <span>${t('Danach weitere Karte')}</span></label>` : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} ${t('Löschen')}</button>`}
+        <button class="btn primary">${t('Speichern')}</button></div>
     </form>`,
     onMount(m, close) {
       const form = m.querySelector('form');
@@ -193,7 +197,7 @@ function openCardForm(deck, card, onSaved) {
           form.reset();
           form.querySelector('[name="again"]').checked = true;
           form.querySelector('[name="front"]').focus();
-          toast('Karte gespeichert');
+          toast(t('Karte gespeichert'));
           onSaved?.();
           return;
         }
@@ -206,7 +210,7 @@ function openCardForm(deck, card, onSaved) {
           d.cards = d.cards.filter((c) => c.id !== card.id);
         });
         close();
-        toast('Karte gelöscht');
+        toast(t('Karte gelöscht'));
         onSaved?.();
       });
     },
@@ -218,21 +222,21 @@ function openAiCards(deck, onSaved) {
   let image = null;
   let suggestions = null;
   openModal({
-    title: 'Karteikarten aus Lernzettel',
+    title: t('Karteikarten aus Lernzettel'),
     body: html`<div class="stack" data-step="input">
-      <p class="muted small">Füge deinen Lernzettel ein oder fotografiere ihn. Die KI macht daraus Karteikarten, die du vor dem Speichern prüfen kannst.</p>
+      <p class="muted small">${t('Füge deinen Lernzettel ein oder fotografiere ihn. Die KI macht daraus Karteikarten, die du vor dem Speichern prüfen kannst.')}</p>
       ${deck ? '' : html`<div class="grid-2">
-        <label class="field"><span>Fach</span><select name="subject">${subjectOptions(getState().profile.subjects[0])}</select></label>
-        <label class="field"><span>Name des Stapels</span><input name="deckName" maxlength="60" placeholder="z. B. Bio: Zelle"></label></div>`}
-      <label class="field"><span>Text vom Lernzettel</span><textarea name="text" rows="6" maxlength="12000" placeholder="Hier deinen Lernzettel einfügen …"></textarea></label>
+        <label class="field"><span>${t('Fach')}</span><select name="subject">${subjectOptions(getState().profile.subjects[0])}</select></label>
+        <label class="field"><span>${t('Name des Stapels')}</span><input name="deckName" maxlength="60" placeholder="${t('z. B. Bio: Zelle')}"></label></div>`}
+      <label class="field"><span>${t('Text vom Lernzettel')}</span><textarea name="text" rows="6" maxlength="12000" placeholder="${t('Hier deinen Lernzettel einfügen …')}"></textarea></label>
       <div class="row wrap gap">
-        <label class="btn ghost sm file-btn">${icon('camera')} Foto statt Text<input type="file" name="photo" accept="image/*" capture="environment" hidden></label>
+        <label class="btn ghost sm file-btn">${icon('camera')} ${t('Foto statt Text')}<input type="file" name="photo" accept="image/*" capture="environment" hidden></label>
         <span class="small muted" data-photo-name></span>
       </div>
-      <img class="preview" alt="Vorschau des Lernzettels" hidden>
-      <label class="field"><span>Wie viele Karten?</span><select name="count"><option>10</option><option selected>15</option><option>25</option></select></label>
+      <img class="preview" alt="${t('Vorschau des Lernzettels')}" hidden>
+      <label class="field"><span>${t('Wie viele Karten?')}</span><select name="count"><option>10</option><option selected>15</option><option>25</option></select></label>
       <p class="form-error" role="alert" hidden></p>
-      <button type="button" class="btn primary block" data-generate>${icon('sparkles')} Karten erstellen</button>
+      <button type="button" class="btn primary block" data-generate>${icon('sparkles')} ${t('Karten erstellen')}</button>
     </div>`,
     onMount(m, close) {
       const err = m.querySelector('.form-error');
@@ -248,7 +252,7 @@ function openAiCards(deck, onSaved) {
           const img = m.querySelector('.preview');
           img.src = image;
           img.hidden = false;
-          m.querySelector('[data-photo-name]').textContent = 'Foto ausgewählt';
+          m.querySelector('[data-photo-name]').textContent = t('Foto ausgewählt');
         } catch (ex) {
           showError(ex.message);
         }
@@ -256,12 +260,12 @@ function openAiCards(deck, onSaved) {
       m.querySelector('[data-generate]').addEventListener('click', async (ev) => {
         const btn = ev.currentTarget;
         const text = m.querySelector('[name="text"]').value.trim();
-        if (!text && !image) return showError('Füge Text ein oder wähle ein Foto aus.');
+        if (!text && !image) return showError(t('Füge Text ein oder wähle ein Foto aus.'));
         showError('');
         if (!(await ensureConsent())) return;
         const subject = deck?.subject || m.querySelector('[name="subject"]').value;
         btn.disabled = true;
-        btn.innerHTML = String(html`<span class="spinner"></span> Buddy erstellt Karten …`);
+        btn.innerHTML = String(html`<span class="spinner"></span> ${t('Buddy erstellt Karten …')}`);
         try {
           const data = await askAI('cards', { subject, text, image, count: Number(m.querySelector('[name="count"]').value) });
           suggestions = data.cards;
@@ -269,7 +273,7 @@ function openAiCards(deck, onSaved) {
         } catch (ex) {
           showError(ex.message);
           btn.disabled = false;
-          btn.innerHTML = String(html`${icon('sparkles')} Nochmal versuchen`);
+          btn.innerHTML = String(html`${icon('sparkles')} ${t('Nochmal versuchen')}`);
         }
       });
     },
@@ -280,10 +284,10 @@ function showSuggestions(m, cards, deck, subject, close, onSaved) {
   const deckName = deck ? '' : m.querySelector('[name="deckName"]').value.trim();
   const body = m.querySelector('.modal-body');
   body.innerHTML = String(html`<div class="stack">
-    <p><strong>${plural(cards.length, 'Karte', 'Karten')} erstellt.</strong> Entferne die Haken bei Karten, die du nicht brauchst.</p>
+    <p><strong>${t('{cards} erstellt.', { cards: cardCount(cards.length) })}</strong> ${t('Entferne die Haken bei Karten, die du nicht brauchst.')}</p>
     <ul class="list suggestions">${cards.map((c, i) => html`<li><label class="check-row"><input type="checkbox" checked data-i="${i}">
       <span><strong>${c.front}</strong><br><span class="muted">${c.back}</span></span></label></li>`)}</ul>
-    <button type="button" class="btn primary block" data-save>Ausgewählte speichern</button>
+    <button type="button" class="btn primary block" data-save>${t('Ausgewählte speichern')}</button>
   </div>`);
   body.querySelector('[data-save]').addEventListener('click', () => {
     const chosen = [...body.querySelectorAll('input[data-i]:checked')].map((x) => cards[Number(x.dataset.i)]);
@@ -291,14 +295,14 @@ function showSuggestions(m, cards, deck, subject, close, onSaved) {
     const saved = update((s) => {
       let d = deck && s.decks.find((x) => x.id === deck.id);
       if (!d) {
-        d = { id: uid(), name: deckName || `${subject} – Karteikarten`, subject, cards: [], createdOn: todayISO() };
+        d = { id: uid(), name: deckName || t('{subject} – Karteikarten', { subject: subjectName(subject) }), subject, cards: [], createdOn: todayISO() };
         s.decks.push(d);
       }
       for (const c of chosen) d.cards.push({ id: uid(), front: c.front, back: c.back, box: 1, due: todayISO(), reviews: 0, lapses: 0 });
       return d;
     });
     close();
-    toast(`${plural(chosen.length, 'Karte', 'Karten')} gespeichert ✨`);
+    toast(`${t('{cards} gespeichert', { cards: cardCount(chosen.length) })} ✨`);
     onSaved?.(saved);
   });
 }
@@ -322,8 +326,8 @@ function renderReview(root, ctx, id) {
   const item = review.queue[review.index];
 
   if (!review.queue.length) {
-    root.innerHTML = String(html`<a class="back" href="${back}">${icon('left')} Zurück</a>
-      ${emptyState('cards', 'Keine Karten zum Wiederholen', 'Lege zuerst Karteikarten an.')}`);
+    root.innerHTML = String(html`<a class="back" href="${back}">${icon('left')} ${t('Zurück')}</a>
+      ${emptyState('cards', t('Keine Karten zum Wiederholen'), t('Lege zuerst Karteikarten an.'))}`);
     review = null;
     return;
   }
@@ -331,10 +335,12 @@ function renderReview(root, ctx, id) {
     const total = review.known + review.again;
     root.innerHTML = String(html`<div class="result">
       ${ring(100, { size: 110, stroke: 10 })}
-      <h1>Geschafft! 🎉</h1>
-      <p>${plural(total, 'Antwort', 'Antworten')}: ${review.known} gewusst, ${review.again}× nochmal.</p>
-      <p class="muted">Karten, die du wusstest, kommen erst in ein paar Tagen wieder dran.</p>
-      <a class="btn primary" href="${back}">Fertig</a></div>`);
+      <h1>${t('Geschafft! 🎉')}</h1>
+      <p>${total === 1
+        ? t('1 Antwort: {known} gewusst, {again}× nochmal.', { known: review.known, again: review.again })
+        : t('{n} Antworten: {known} gewusst, {again}× nochmal.', { n: total, known: review.known, again: review.again })}</p>
+      <p class="muted">${t('Karten, die du wusstest, kommen erst in ein paar Tagen wieder dran.')}</p>
+      <a class="btn primary" href="${back}">${t('Fertig')}</a></div>`);
     review = null;
     return;
   }
@@ -346,19 +352,19 @@ function renderReview(root, ctx, id) {
     return renderReview(root, ctx, id);
   }
   root.innerHTML = String(html`
-    <div class="row between"><a class="back" href="${back}">${icon('x')} Beenden</a>
-      <span class="muted small">${review.index + 1} / ${review.queue.length}${review.practice ? ' · Übungsrunde' : ''}</span></div>
+    <div class="row between"><a class="back" href="${back}">${icon('x')} ${t('Beenden')}</a>
+      <span class="muted small">${review.index + 1} / ${review.queue.length}${review.practice ? ` · ${t('Übungsrunde')}` : ''}</span></div>
     ${bar((review.index / review.queue.length) * 100)}
     <button type="button" class="flashcard ${review.flipped ? 'flipped' : ''}" data-action="flip" aria-live="polite">
-      <span class="face front" ${review.flipped ? html`aria-hidden="true"` : ''}><small>${subjectDot(deck.subject)}${deck.name}</small><span class="face-text">${card.front}</span><small class="muted">Tippen zum Umdrehen</small></span>
-      <span class="face back" ${review.flipped ? '' : html`aria-hidden="true"`}><small>Antwort</small><span class="face-text">${card.back}</span></span>
+      <span class="face front" ${review.flipped ? html`aria-hidden="true"` : ''}><small>${subjectDot(deck.subject)}${deck.name}</small><span class="face-text">${card.front}</span><small class="muted">${t('Tippen zum Umdrehen')}</small></span>
+      <span class="face back" ${review.flipped ? '' : html`aria-hidden="true"`}><small>${t('Antwort')}</small><span class="face-text">${card.back}</span></span>
     </button>
     ${review.flipped
       ? html`<div class="grid-2 rate">
-          <button type="button" class="btn danger lg" data-action="again">${icon('refresh')} Nochmal</button>
-          <button type="button" class="btn success lg" data-action="knew">${icon('check')} Gewusst</button></div>`
-      : html`<button type="button" class="btn primary block lg" data-action="flip">Antwort zeigen</button>`}
-    <p class="muted small center">Fach ${card.box || 1} von ${MAX_BOX}. Tastatur: Leertaste dreht um, 1 = nochmal, 2 = gewusst.</p>
+          <button type="button" class="btn danger lg" data-action="again">${icon('refresh')} ${t('Nochmal')}</button>
+          <button type="button" class="btn success lg" data-action="knew">${icon('check')} ${t('Gewusst')}</button></div>`
+      : html`<button type="button" class="btn primary block lg" data-action="flip">${t('Antwort zeigen')}</button>`}
+    <p class="muted small center">${t('Fach {box} von {max}. Tastatur: Leertaste dreht um, 1 = nochmal, 2 = gewusst.', { box: card.box || 1, max: MAX_BOX })}</p>
   `);
 
   const rate = (knew) => {
@@ -429,34 +435,35 @@ function renderQuizSetup(root, ctx) {
   const subject = quiz?.subject || s.profile.subjects[0] || 'Mathe';
   const examTopics = s.exams
     .filter((e) => e.date >= today)
-    .flatMap((e) => (e.topics || []).map((t) => ({ subject: e.subject, topic: t.name })));
-  const weak = topicScores(s.quizzes).filter((t) => t.pct < 70).slice(0, 4);
+    .flatMap((e) => (e.topics || []).map((x) => ({ subject: e.subject, topic: x.name })));
+  const weak = topicScores(s.quizzes).filter((x) => x.pct < 70).slice(0, 4);
   const suggestions = [...examTopics, ...weak.map((w) => ({ subject: w.subject, topic: w.topic }))]
     .filter((x, i, arr) => arr.findIndex((y) => y.subject === x.subject && y.topic === x.topic) === i)
     .slice(0, 8);
   const decks = s.decks.filter((d) => d.cards.length >= 4);
   const recent = [...s.quizzes].reverse().slice(0, 5);
+  const levels = [['leicht', t('Leicht')], ['mittel', t('Mittel')], ['schwer', t('Schwer')]];
 
   root.innerHTML = String(html`
-    ${pageHead('Lernen')}${tabs(TABS, 'quiz')}
+    ${pageHead(t('Lernen'))}${tabs(TABS, 'quiz')}
     <form class="card stack" data-form="quiz">
-      <h2>${icon('sparkles')} KI-Quiz erstellen</h2>
+      <h2>${icon('sparkles')} ${t('KI-Quiz erstellen')}</h2>
       <div class="grid-2">
-        <label class="field"><span>Fach</span><select name="subject">${subjectOptions(subject)}</select></label>
-        <label class="field"><span>Fragen</span><select name="count"><option>5</option><option selected>10</option><option>15</option></select></label>
+        <label class="field"><span>${t('Fach')}</span><select name="subject">${subjectOptions(subject)}</select></label>
+        <label class="field"><span>${t('Wie viele Fragen?')}</span><select name="count"><option>5</option><option selected>10</option><option>15</option></select></label>
       </div>
-      <label class="field"><span>Thema</span><input name="topic" required maxlength="120" value="${quiz?.topic && quiz.source === 'ai' ? quiz.topic : ''}" placeholder="z. B. Satz des Pythagoras"></label>
+      <label class="field"><span>${t('Thema')}</span><input name="topic" required maxlength="120" value="${quiz?.topic && quiz.source === 'ai' ? quiz.topic : ''}" placeholder="${t('z. B. Satz des Pythagoras')}"></label>
       ${suggestions.length ? html`<div class="chips small">${suggestions.map((x) => html`<button type="button" class="chip" data-action="topic" data-subject="${x.subject}" data-topic="${x.topic}">${subjectDot(x.subject)}${x.topic}</button>`)}</div>` : ''}
-      <fieldset class="field"><legend>Schwierigkeit</legend><div class="choice">
-        ${[['leicht', 'Leicht'], ['mittel', 'Mittel'], ['schwer', 'Schwer']].map(([v, l]) => html`<label><input type="radio" name="difficulty" value="${v}" ${v === (quiz?.difficulty || 'mittel') ? 'checked' : ''}><span>${l}</span></label>`)}
+      <fieldset class="field"><legend>${t('Schwierigkeit')}</legend><div class="choice">
+        ${levels.map(([v, l]) => html`<label><input type="radio" name="difficulty" value="${v}" ${v === (quiz?.difficulty || 'mittel') ? 'checked' : ''}><span>${l}</span></label>`)}
       </div></fieldset>
       ${quiz?.error ? html`<p class="form-error" role="alert">${quiz.error}</p>` : ''}
-      <button class="btn primary block" ${quiz?.phase === 'loading' ? 'disabled' : ''}>${quiz?.phase === 'loading' ? html`<span class="spinner"></span> Buddy denkt sich Fragen aus …` : html`${icon('sparkles')} Quiz starten`}</button>
+      <button class="btn primary block" ${quiz?.phase === 'loading' ? 'disabled' : ''}>${quiz?.phase === 'loading' ? html`<span class="spinner"></span> ${t('Buddy denkt sich Fragen aus …')}` : html`${icon('sparkles')} ${t('Quiz starten')}`}</button>
     </form>
-    ${decks.length ? html`<section class="section">${sectionHead('Quiz aus deinen Karteikarten')}
+    ${decks.length ? html`<section class="section">${sectionHead(t('Quiz aus deinen Karteikarten'))}
       <div class="chips">${decks.map((d) => html`<button type="button" class="chip" data-action="deck-quiz" data-id="${d.id}">${subjectDot(d.subject)}${d.name}</button>`)}</div></section>` : ''}
-    ${recent.length ? html`<section class="section">${sectionHead('Letzte Ergebnisse', html`<a class="link" href="#/progress">Fortschritt</a>`)}
-      <ul class="list">${recent.map((q) => html`<li class="result-row">${subjectDot(q.subject)}<span class="grow">${q.topic}<span class="muted small"> · ${q.subject}</span></span>
+    ${recent.length ? html`<section class="section">${sectionHead(t('Letzte Ergebnisse'), html`<a class="link" href="#/progress">${t('Fortschritt')}</a>`)}
+      <ul class="list">${recent.map((q) => html`<li class="result-row">${subjectDot(q.subject)}<span class="grow">${q.topic}<span class="muted small"> · ${subjectName(q.subject)}</span></span>
         <span class="badge ${q.score / q.total >= 0.7 ? 'success' : 'warn'}">${q.score}/${q.total}</span></li>`)}</ul></section>` : ''}
   `);
 
@@ -501,10 +508,10 @@ function renderQuestion(root, ctx) {
   const answer = quiz.answers[quiz.index];
   const answered = answer !== undefined;
   root.innerHTML = String(html`
-    <div class="row between"><button type="button" class="back" data-action="quit">${icon('x')} Beenden</button>
-      <span class="muted small">Frage ${quiz.index + 1} von ${quiz.questions.length}</span></div>
+    <div class="row between"><button type="button" class="back" data-action="quit">${icon('x')} ${t('Beenden')}</button>
+      <span class="muted small">${t('Frage {n} von {total}', { n: quiz.index + 1, total: quiz.questions.length })}</span></div>
     ${bar((quiz.index / quiz.questions.length) * 100)}
-    <p class="muted small">${subjectDot(quiz.subject)}${quiz.subject} · ${quiz.topic}</p>
+    <p class="muted small">${subjectDot(quiz.subject)}${subjectName(quiz.subject)} · ${quiz.topic}</p>
     <h2 class="question">${q.question}</h2>
     <div class="options">${q.options.map((o, i) => {
       let cls = '';
@@ -514,9 +521,9 @@ function renderQuestion(root, ctx) {
         <span class="option-letter">${'ABCD'[i]}</span><span>${o}</span></button>`;
     })}</div>
     ${answered ? html`<div class="feedback ${answer === q.correct ? 'good' : 'bad'}" role="status">
-        <strong>${answer === q.correct ? 'Richtig! 🎉' : 'Leider falsch.'}</strong>
-        ${q.explanation ? html`<p>${q.explanation}</p>` : answer === q.correct ? '' : html`<p>Richtig ist: ${q.options[q.correct]}</p>`}</div>
-      <button type="button" class="btn primary block lg" data-action="next">${quiz.index + 1 < quiz.questions.length ? 'Weiter' : 'Ergebnis ansehen'}</button>` : ''}
+        <strong>${answer === q.correct ? t('Richtig! 🎉') : t('Leider falsch.')}</strong>
+        ${q.explanation ? html`<p>${q.explanation}</p>` : answer === q.correct ? '' : html`<p>${t('Richtig ist: {answer}', { answer: q.options[q.correct] })}</p>`}</div>
+      <button type="button" class="btn primary block lg" data-action="next">${quiz.index + 1 < quiz.questions.length ? t('Weiter') : t('Ergebnis ansehen')}</button>` : ''}
   `);
   root.onclick = async (e) => {
     const a = e.target.closest('[data-action]');
@@ -531,7 +538,7 @@ function renderQuestion(root, ctx) {
       if (quiz.index >= quiz.questions.length) finishQuiz();
       ctx.refresh();
     }
-    if (a.dataset.action === 'quit' && (await confirmDialog('Quiz abbrechen? Dein Ergebnis wird nicht gespeichert.', { confirmText: 'Abbrechen' }))) {
+    if (a.dataset.action === 'quit' && (await confirmDialog(t('Quiz abbrechen? Dein Ergebnis wird nicht gespeichert.'), { confirmText: t('Quiz beenden') }))) {
       quiz = { phase: 'setup', subject: quiz.subject, topic: quiz.topic, difficulty: quiz.difficulty, source: quiz.source };
       ctx.refresh();
     }
@@ -553,23 +560,23 @@ function renderResult(root, ctx) {
   const total = quiz.questions.length;
   const pct = Math.round((quiz.score / total) * 100);
   const wrong = quiz.questions.map((q, i) => ({ q, a: quiz.answers[i] })).filter((x) => x.a !== x.q.correct);
-  const message = pct === 100 ? 'Perfekt! Alles richtig! 🏆' : pct >= 80 ? 'Super gemacht! 💪' : pct >= 50 ? 'Gut, da geht noch was! 📈' : 'Dranbleiben – Übung macht den Meister! 🌱';
+  const message = pct === 100 ? t('Perfekt! Alles richtig! 🏆') : pct >= 80 ? t('Super gemacht! 💪') : pct >= 50 ? t('Gut, da geht noch was! 📈') : t('Dranbleiben – Übung macht den Meister! 🌱');
   root.innerHTML = String(html`
     <div class="result">
-      <div class="ring-wrap">${ring(pct, { size: 120, stroke: 11, label: `${pct} Prozent richtig` })}<span class="ring-label big"><strong>${quiz.score}/${total}</strong></span></div>
+      <div class="ring-wrap">${ring(pct, { size: 120, stroke: 11, label: t('{n} Prozent richtig', { n: pct }) })}<span class="ring-label big"><strong>${quiz.score}/${total}</strong></span></div>
       <h1>${message}</h1>
-      <p class="muted">${quiz.subject} · ${quiz.topic}</p>
+      <p class="muted">${subjectName(quiz.subject)} · ${quiz.topic}</p>
     </div>
-    ${wrong.length ? html`<section class="section">${sectionHead('Das solltest du wiederholen')}
+    ${wrong.length ? html`<section class="section">${sectionHead(t('Das solltest du wiederholen'))}
       <ul class="list">${wrong.map(({ q, a }) => html`<li class="review-item"><strong>${q.question}</strong>
-        <span class="small">Deine Antwort: <span class="danger-text">${q.options[a]}</span></span>
-        <span class="small">Richtig: <span class="success-text">${q.options[q.correct]}</span></span>
+        <span class="small">${t('Deine Antwort:')} <span class="danger-text">${q.options[a]}</span></span>
+        <span class="small">${t('Richtig:')} <span class="success-text">${q.options[q.correct]}</span></span>
         ${q.explanation ? html`<span class="small muted">${q.explanation}</span>` : ''}</li>`)}</ul>
-      ${quiz.source === 'ai' ? html`<button type="button" class="btn ghost block" data-action="to-cards">${icon('cards')} Als Karteikarten speichern</button>` : ''}
+      ${quiz.source === 'ai' ? html`<button type="button" class="btn ghost block" data-action="to-cards">${icon('cards')} ${t('Als Karteikarten speichern')}</button>` : ''}
     </section>` : ''}
     <div class="grid-2 section">
-      <button type="button" class="btn ghost" data-action="again">${icon('refresh')} Nochmal</button>
-      <button type="button" class="btn primary" data-action="new">Neues Quiz</button>
+      <button type="button" class="btn ghost" data-action="again">${icon('refresh')} ${t('Nochmal')}</button>
+      <button type="button" class="btn primary" data-action="new">${t('Neues Quiz')}</button>
     </div>
   `);
   root.onclick = (e) => {
@@ -585,7 +592,7 @@ function renderResult(root, ctx) {
     }
     if (a.dataset.action === 'to-cards') {
       const deck = update((s) => {
-        const name = `${quiz.subject}: ${quiz.topic}`.slice(0, 60);
+        const name = `${subjectName(quiz.subject)}: ${quiz.topic}`.slice(0, 60);
         let d = s.decks.find((x) => x.name === name);
         if (!d) {
           d = { id: uid(), name, subject: quiz.subject, cards: [], createdOn: todayISO() };
@@ -596,7 +603,7 @@ function renderResult(root, ctx) {
         }
         return d;
       });
-      toast(`${plural(wrong.length, 'Karte', 'Karten')} im Stapel „${deck.name}“ gespeichert`);
+      toast(t('{cards} im Stapel „{deck}“ gespeichert', { cards: cardCount(wrong.length), deck: deck.name }));
       a.disabled = true;
     }
   };

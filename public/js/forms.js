@@ -3,19 +3,21 @@ import { getState, update, uid, SUBJECTS, EXAM_TYPES } from './store.js';
 import { html, icon, openModal, toast, confirmDialog } from './ui.js';
 import { todayISO, addDays, isValidISO } from './dates.js';
 import { deleteExam, deleteHomework } from './actions.js';
+import { t, subjectName, examTypeName } from './i18n.js';
 
+/** Auswahlliste der Fächer. Der Wert bleibt der gespeicherte (deutsche) Name. */
 export function subjectOptions(selected) {
   const mine = getState().profile.subjects;
   const others = SUBJECTS.filter((s) => !mine.includes(s));
   const extra = selected && !mine.includes(selected) && !SUBJECTS.includes(selected) ? [selected] : [];
-  const opt = (s) => html`<option value="${s}" ${s === selected ? 'selected' : ''}>${s}</option>`;
-  return html`<optgroup label="Deine Fächer">${[...mine, ...extra].map(opt)}</optgroup>
-    ${others.length ? html`<optgroup label="Weitere Fächer">${others.map(opt)}</optgroup>` : ''}`;
+  const opt = (s) => html`<option value="${s}" ${s === selected ? 'selected' : ''}>${subjectName(s)}</option>`;
+  return html`<optgroup label="${t('Deine Fächer')}">${[...mine, ...extra].map(opt)}</optgroup>
+    ${others.length ? html`<optgroup label="${t('Weitere Fächer')}">${others.map(opt)}</optgroup>` : ''}`;
 }
 
 const difficultyField = (value) => html`<fieldset class="field">
-  <legend>Wie schwer ist der Stoff für dich?</legend>
-  <div class="choice">${[[1, 'Leicht'], [2, 'Mittel'], [3, 'Schwer']].map(
+  <legend>${t('Wie schwer ist der Stoff für dich?')}</legend>
+  <div class="choice">${[[1, t('Leicht')], [2, t('Mittel')], [3, t('Schwer')]].map(
     ([v, label]) => html`<label><input type="radio" name="difficulty" value="${v}" ${Number(value) === v ? 'checked' : ''}><span>${label}</span></label>`,
   )}</div></fieldset>`;
 
@@ -26,23 +28,23 @@ export function openExamForm(exam, onSaved, preset = {}) {
   const e = exam || { subject: preset.subject || getState().profile.subjects[0] || 'Mathe', type: 'Klassenarbeit', date: addDays(today, 7), difficulty: 2, topics: [] };
   const past = !isNew && e.date < today;
   openModal({
-    title: isNew ? 'Neue Prüfung' : 'Prüfung bearbeiten',
+    title: isNew ? t('Neue Prüfung') : t('Prüfung bearbeiten'),
     body: html`<form class="stack" data-form="exam" novalidate>
       <div class="grid-2">
-        <label class="field"><span>Fach</span><select name="subject">${subjectOptions(e.subject)}</select></label>
-        <label class="field"><span>Art</span><select name="type">${EXAM_TYPES.map((t) => html`<option ${t === e.type ? 'selected' : ''}>${t}</option>`)}</select></label>
+        <label class="field"><span>${t('Fach')}</span><select name="subject">${subjectOptions(e.subject)}</select></label>
+        <label class="field"><span>${t('Art')}</span><select name="type">${EXAM_TYPES.map((type) => html`<option value="${type}" ${type === e.type ? 'selected' : ''}>${examTypeName(type)}</option>`)}</select></label>
       </div>
-      <label class="field"><span>Datum</span><input type="date" name="date" value="${e.date}" required></label>
-      <label class="field"><span>Titel <em>(optional)</em></span><input name="title" value="${e.title || ''}" placeholder="z. B. Bruchrechnung" maxlength="80"></label>
-      <label class="field"><span>Themen – eins pro Zeile</span>
-        <textarea name="topics" rows="5" placeholder="z. B.\nBrüche kürzen und erweitern\nBrüche addieren\nTextaufgaben">${(e.topics || []).map((t) => t.name).join('\n')}</textarea>
-        <small class="muted">SchoolBuddy plant für jedes Thema eine Lern- und eine Wiederholungseinheit.</small></label>
+      <label class="field"><span>${t('Datum')}</span><input type="date" name="date" value="${e.date}" required></label>
+      <label class="field"><span>${t('Titel')} <em>${t('(optional)')}</em></span><input name="title" value="${e.title || ''}" placeholder="${t('z. B. Bruchrechnung')}" maxlength="80"></label>
+      <label class="field"><span>${t('Themen – eins pro Zeile')}</span>
+        <textarea name="topics" rows="5" placeholder="${t('z. B.\nBrüche kürzen und erweitern\nBrüche addieren\nTextaufgaben')}">${(e.topics || []).map((topic) => topic.name).join('\n')}</textarea>
+        <small class="muted">${t('SchoolBuddy plant für jedes Thema eine Lern- und eine Wiederholungseinheit.')}</small></label>
       ${difficultyField(e.difficulty)}
-      ${past ? html`<label class="field"><span>Note <em>(optional)</em></span><input name="grade" value="${e.grade || ''}" maxlength="6" placeholder="z. B. 2+"></label>` : ''}
+      ${past ? html`<label class="field"><span>${t('Note')} <em>${t('(optional)')}</em></span><input name="grade" value="${e.grade || ''}" maxlength="6" placeholder="${t('z. B. 2+')}"></label>` : ''}
       <p class="form-error" role="alert" hidden></p>
       <div class="row end">
-        ${isNew ? '' : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} Löschen</button>`}
-        <button class="btn primary">${isNew ? 'Lernplan erstellen' : 'Speichern'}</button>
+        ${isNew ? '' : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} ${t('Löschen')}</button>`}
+        <button class="btn primary">${isNew ? t('Lernplan erstellen') : t('Speichern')}</button>
       </div>
     </form>`,
     onMount(m, close) {
@@ -53,18 +55,18 @@ export function openExamForm(exam, onSaved, preset = {}) {
         const date = String(f.get('date'));
         const error = form.querySelector('.form-error');
         if (!isValidISO(date)) {
-          error.textContent = 'Bitte gib ein gültiges Datum ein.';
+          error.textContent = t('Bitte gib ein gültiges Datum ein.');
           error.hidden = false;
           return;
         }
         if (isNew && date <= today) {
-          error.textContent = 'Das Datum muss in der Zukunft liegen, damit SchoolBuddy einen Plan erstellen kann.';
+          error.textContent = t('Das Datum muss in der Zukunft liegen, damit SchoolBuddy einen Plan erstellen kann.');
           error.hidden = false;
           return;
         }
-        const names = [...new Set(String(f.get('topics')).split('\n').map((t) => t.trim()).filter(Boolean))].slice(0, 20);
+        const names = [...new Set(String(f.get('topics')).split('\n').map((x) => x.trim()).filter(Boolean))].slice(0, 20);
         const oldTopics = e.topics || [];
-        const topics = names.map((name) => oldTopics.find((t) => t.name === name) || { id: uid().slice(0, 8), name });
+        const topics = names.map((name) => oldTopics.find((topic) => topic.name === name) || { id: uid().slice(0, 8), name });
         const data = {
           subject: String(f.get('subject')),
           type: String(f.get('type')),
@@ -79,14 +81,14 @@ export function openExamForm(exam, onSaved, preset = {}) {
           else Object.assign(s.exams.find((x) => x.id === e.id), data);
         });
         close();
-        toast(isNew ? 'Lernplan erstellt ✨' : 'Gespeichert');
+        toast(isNew ? t('Lernplan erstellt ✨') : t('Gespeichert'));
         onSaved?.();
       });
       m.querySelector('[data-delete]')?.addEventListener('click', async () => {
         close();
-        if (await confirmDialog('Diese Prüfung und ihren Lernplan löschen?')) {
+        if (await confirmDialog(t('Diese Prüfung und ihren Lernplan löschen?'))) {
           deleteExam(e.id);
-          toast('Prüfung gelöscht');
+          toast(t('Prüfung gelöscht'));
           onSaved?.();
         }
       });
@@ -99,17 +101,17 @@ export function openHomeworkForm(hw, onSaved) {
   const isNew = !hw;
   const h = hw || { subject: getState().profile.subjects[0] || 'Mathe', text: '', due: addDays(today, 1) };
   openModal({
-    title: isNew ? 'Neue Hausaufgabe' : 'Hausaufgabe bearbeiten',
+    title: isNew ? t('Neue Hausaufgabe') : t('Hausaufgabe bearbeiten'),
     body: html`<form class="stack" novalidate>
-      <label class="field"><span>Was ist zu tun?</span><input name="text" value="${h.text}" required maxlength="160" placeholder="z. B. Buch S. 42, Nr. 3–5" autofocus></label>
+      <label class="field"><span>${t('Was ist zu tun?')}</span><input name="text" value="${h.text}" required maxlength="160" placeholder="${t('z. B. Buch S. 42, Nr. 3–5')}" autofocus></label>
       <div class="grid-2">
-        <label class="field"><span>Fach</span><select name="subject">${subjectOptions(h.subject)}</select></label>
-        <label class="field"><span>Fällig am</span><input type="date" name="due" value="${h.due}" required></label>
+        <label class="field"><span>${t('Fach')}</span><select name="subject">${subjectOptions(h.subject)}</select></label>
+        <label class="field"><span>${t('Fällig am')}</span><input type="date" name="due" value="${h.due}" required></label>
       </div>
       <p class="form-error" role="alert" hidden></p>
       <div class="row end">
-        ${isNew ? '' : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} Löschen</button>`}
-        <button class="btn primary">Speichern</button>
+        ${isNew ? '' : html`<button type="button" class="btn ghost danger-text" data-delete>${icon('trash')} ${t('Löschen')}</button>`}
+        <button class="btn primary">${t('Speichern')}</button>
       </div>
     </form>`,
     onMount(m, close) {
@@ -121,7 +123,7 @@ export function openHomeworkForm(hw, onSaved) {
         const due = String(f.get('due'));
         const error = form.querySelector('.form-error');
         if (!text || !isValidISO(due)) {
-          error.textContent = text ? 'Bitte gib ein gültiges Datum ein.' : 'Bitte beschreib kurz die Aufgabe.';
+          error.textContent = text ? t('Bitte gib ein gültiges Datum ein.') : t('Bitte beschreib kurz die Aufgabe.');
           error.hidden = false;
           return;
         }
@@ -131,13 +133,13 @@ export function openHomeworkForm(hw, onSaved) {
           else Object.assign(s.homework.find((x) => x.id === h.id), data);
         });
         close();
-        toast('Gespeichert');
+        toast(t('Gespeichert'));
         onSaved?.();
       });
       m.querySelector('[data-delete]')?.addEventListener('click', () => {
         deleteHomework(h.id);
         close();
-        toast('Hausaufgabe gelöscht');
+        toast(t('Hausaufgabe gelöscht'));
         onSaved?.();
       });
     },

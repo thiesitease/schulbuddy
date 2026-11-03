@@ -36,7 +36,7 @@ try {
     if ($action === 'status') {
         respond(200, ['ok' => true, 'providers' => [], 'user' => null]);
     }
-    fail(503, 'Die Anmeldung ist gerade nicht verfügbar.');
+    fail(503, tr('Die Anmeldung ist gerade nicht verfügbar.', 'Signing in is not available right now.'));
 }
 Db::cleanup($db);
 $oidc = new Oidc($config, $db);
@@ -71,7 +71,7 @@ if ($action === 'delete' && $method === 'POST') {
     require_same_origin($config);
     $user = Session::user($db);
     if (!$user) {
-        fail(401, 'Bitte melde dich zuerst an.');
+        fail(401, tr('Bitte melde dich zuerst an.', 'Please sign in first.'));
     }
     $db->beginTransaction();
     foreach (['sb_user_data', 'sb_sessions'] as $table) {
@@ -83,4 +83,4 @@ if ($action === 'delete' && $method === 'POST') {
     respond(200, ['ok' => true]);
 }
 
-fail(400, 'Unbekannte Aktion.');
+fail(400, tr('Unbekannte Aktion.', 'Unknown action.'));

@@ -212,5 +212,17 @@ check($limited->getStatusCode() === 429, 'Tageslimit pro Gerät greift', body($l
 $foreignAi = $http->post('/api/ai.php', ['headers' => ['Origin' => 'https://evil.example'], 'json' => ['task' => 'chat', 'deviceId' => $device, 'messages' => [['role' => 'user', 'text' => 'Hi']]]]);
 check($foreignAi->getStatusCode() === 403, 'KI-Anfragen von fremden Seiten werden abgelehnt');
 
+echo "Englisch\n";
+$enDevice = 'test-device-' . bin2hex(random_bytes(4));
+$en = ORIGIN + ['X-SchulBuddy-Lang' => 'en'];
+$enChat = body($http->post('/api/ai.php', ['headers' => $en, 'json' => ['task' => 'chat', 'deviceId' => $enDevice, 'grade' => 7, 'messages' => [['role' => 'user', 'text' => 'What is a fraction?']]]]));
+check(($enChat['ok'] ?? false) && str_contains($last()['body']['system'][0]['text'] ?? '', 'Answer in English'), 'System-Prompt auf Englisch', $last()['body']['system'][0]['text'] ?? null);
+$http->post('/api/ai.php', ['headers' => $en, 'json' => ['task' => 'quiz', 'deviceId' => $enDevice, 'subject' => 'Maths', 'topic' => 'Fractions', 'difficulty' => 'schwer', 'count' => 5]]);
+check(str_contains((string) ($last()['body']['messages'][0]['content'] ?? ''), 'Difficulty: hard'), 'Quiz-Prompt auf Englisch', $last()['body']['messages'][0]['content'] ?? null);
+$enError = body($http->post('/api/ai.php', ['headers' => $en, 'json' => ['task' => 'chat', 'deviceId' => $enDevice, 'messages' => []]]));
+check(($enError['error'] ?? '') === 'Please ask a question.', 'Fehlermeldungen auf Englisch', $enError);
+$deError = body($http->post('/api/ai.php', ['headers' => ORIGIN, 'json' => ['task' => 'chat', 'deviceId' => $enDevice, 'messages' => []]]));
+check(($deError['error'] ?? '') === 'Bitte stell eine Frage.', 'Ohne Sprach-Header bleibt es Deutsch', $deError);
+
 echo "\n{$checks} Prüfungen, " . ($failures ? "{$failures} fehlgeschlagen" : 'alle bestanden') . "\n";
 exit($failures ? 1 : 0);

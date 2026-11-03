@@ -4,11 +4,29 @@ declare(strict_types=1);
 
 namespace SchulBuddy;
 
-/** Prompts und JSON-Schemas für die KI-Funktionen. */
+/**
+ * Prompts und JSON-Schemas für die KI-Funktionen, auf Deutsch und Englisch.
+ * Die englischen Fassungen entsprechen den deutschen; Schülerinnen und Schüler gehen auch dann
+ * auf eine Schule in Deutschland, deshalb bleiben die deutschen Lehrpläne der Maßstab.
+ */
 final class Prompts
 {
-    public static function system(int $grade): string
+    public static function system(int $grade, string $lang = 'de'): string
     {
+        if ($lang === 'en') {
+            return <<<TXT
+            You are Buddy, the AI study assistant in the SchoolBuddy app. You help students at schools in Germany with their learning. The person you are talking to is in grade {$grade} (Klasse {$grade}).
+
+            How you help:
+            - Answer in English and use a friendly, informal tone. Be encouraging and patient, but honest.
+            - Explain clearly and at the right level for the grade, step by step and with examples. Keep answers fairly short and offer to go deeper.
+            - The goal is that the person understands the material. With homework, guide them to the solution with questions and hints instead of just giving the answer. Show a complete solution only when explicitly asked – and then explain every step.
+            - Follow the German school curricula. Keep German or foreign-language terms and example sentences where the subject needs them, for example in German or French lessons. If you are unsure about a fact, say so.
+            - Formatting: short paragraphs, bullet points and **bold** for key points. No LaTeX: write formulas with Unicode characters such as x², √, ·, ÷, ≤, π or ½.
+            - Stick to school and learning. Gently steer other topics back. Do not ask for personal data.
+            - If someone mentions worries, bullying, violence or thoughts of self-harm, respond with empathy and mention the Nummer gegen Kummer (116 111, free and anonymous) and the TelefonSeelsorge (0800 111 0 111). In acute danger: call 112.
+            TXT;
+        }
         return <<<TXT
         Du bist Buddy, der KI-Lernassistent der App SchoolBuddy. Du hilfst Schülerinnen und Schülern in Deutschland beim Lernen. Die Person, mit der du sprichst, geht in Klasse {$grade}.
 
@@ -23,8 +41,24 @@ final class Prompts
         TXT;
     }
 
-    public static function quiz(string $subject, string $topic, string $difficulty, int $count, int $grade): string
+    public static function quiz(string $subject, string $topic, string $difficulty, int $count, int $grade, string $lang = 'de'): string
     {
+        if ($lang === 'en') {
+            $level = ['leicht' => 'easy', 'mittel' => 'medium', 'schwer' => 'hard'][$difficulty] ?? 'medium';
+            return <<<TXT
+            Create a quiz with {$count} multiple-choice questions for grade {$grade} in the subject {$subject}.
+            Topic: {$topic}
+            Difficulty: {$level}
+
+            - Each question has exactly 4 answer options, exactly one of them correct. The wrong answers are plausible, for example typical mistakes.
+            - "correct" is the index (0 to 3) of the correct answer. The correct answer is not always in the same position.
+            - "explanation" explains in one or two sentences why the answer is correct.
+            - The questions are factually correct, match the curriculum for the grade and do not refer to images.
+            - Write questions, answers and explanations in English. Keep German or foreign-language examples where the subject requires them.
+            - Formulas with Unicode instead of LaTeX.
+            If the topic is not a school topic, use the closest school topic of the subject.
+            TXT;
+        }
         return <<<TXT
         Erstelle ein Quiz mit {$count} Multiple-Choice-Fragen für Klasse {$grade} im Fach {$subject}.
         Thema: {$topic}
@@ -39,8 +73,21 @@ final class Prompts
         TXT;
     }
 
-    public static function cards(string $subject, int $count, int $grade, bool $hasImage): string
+    public static function cards(string $subject, int $count, int $grade, bool $hasImage, string $lang = 'de'): string
     {
+        if ($lang === 'en') {
+            $source = $hasImage ? 'the photo of the study notes' : 'the study notes below';
+            return <<<TXT
+            Create up to {$count} flashcards for grade {$grade} in the subject {$subject} from {$source}.
+
+            - "front": a clear question or term. "back": a short, correct answer of at most three sentences.
+            - Cover the most important content of the notes and do not add anything new. Correct obvious mistakes in the notes.
+            - Write the cards in the language of the notes.
+            - For vocabulary, put the word in the foreign language on the front and its meaning on the back, as given in the notes.
+            - Formulas with Unicode instead of LaTeX.
+            If the notes are unreadable or contain no study material, return an empty list.
+            TXT;
+        }
         $source = $hasImage ? 'dem Foto des Lernzettels' : 'dem Lernzettel unten';
         return <<<TXT
         Erstelle aus {$source} bis zu {$count} Karteikarten für Klasse {$grade} im Fach {$subject}.
@@ -53,8 +100,39 @@ final class Prompts
         TXT;
     }
 
-    public static function scan(string $mode, string $subject, string $question): string
+    public static function scan(string $mode, string $subject, string $question, string $lang = 'de'): string
     {
+        if ($lang === 'en') {
+            $intro = 'The photo shows a school task' . ($subject !== '' ? " in the subject {$subject}" : '') . '.';
+            if ($question !== '') {
+                $intro .= "\nThe question about it: {$question}";
+            }
+            $steps = $mode === 'explain'
+                ? <<<TXT
+                Explain the complete solution:
+                1. **What is being asked?** Briefly, in your own words.
+                2. **What do I need to know?** A short explanation of the rule, formula or term needed.
+                3. **Solution step by step**, each step with a short reason.
+                4. **Result**
+                5. **Tip** for solving similar tasks.
+                TXT
+                : <<<TXT
+                Help with hints without giving away the final result:
+                1. **What is being asked?** Briefly, in your own words.
+                2. **What do I need to know?** A short explanation of the rule, formula or term needed.
+                3. **Hints step by step** that lead to the solution.
+                4. **Check yourself:** a check question or a way to check your own result.
+                TXT;
+
+            return <<<TXT
+            {$intro}
+
+            {$steps}
+
+            If several tasks are visible and none was specified, take the first one and offer to continue with the others. If the photo is blurry or unreadable, say so and ask for a new photo.
+            TXT;
+        }
+
         $intro = 'Auf dem Foto ist eine Schulaufgabe' . ($subject !== '' ? " im Fach {$subject}" : '') . '.';
         if ($question !== '') {
             $intro .= "\nDie Frage dazu: {$question}";
