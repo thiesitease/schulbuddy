@@ -1,9 +1,9 @@
 // Erster Start: Name, Klasse, Fächer und Lernzeit.
 import { getState, update, SUBJECTS } from '../store.js';
-import { html, LOGO, icon } from '../ui.js';
+import { html, LOGO, icon, toast } from '../ui.js';
 import { WEEKDAYS } from '../dates.js';
-import { providerButtons } from '../components.js';
-import { accountInfo, login } from '../account.js';
+import { providerButtons, PROVIDER_NAMES } from '../components.js';
+import { accountInfo, login, logout } from '../account.js';
 
 const PRESETS = {
   wenig: { label: 'Locker', text: 'ca. 20 Min. am Tag', minutes: [20, 20, 20, 20, 20, 0, 20] },
@@ -40,6 +40,13 @@ export default {
       const a = e.target.closest('[data-action]');
       if (!a) return;
       if (a.dataset.action === 'login') login(a.dataset.provider);
+      if (a.dataset.action === 'logout') {
+        logout().then((done) => {
+          if (!done) return;
+          draft = null;
+          toast('Abgemeldet.');
+        });
+      }
       if (a.dataset.action === 'next') go(step + 1);
       if (a.dataset.action === 'back') go(step - 1);
       if (a.dataset.action === 'subject') {
@@ -85,6 +92,7 @@ export default {
 };
 
 function welcome() {
+  const signedIn = !!accountInfo().user;
   return html`<div class="welcome">
     ${LOGO}
     <h1>SchoolBuddy</h1>
@@ -95,21 +103,24 @@ function welcome() {
       <li>${icon('sparkles')} KI-Lernhilfe, die dir Dinge Schritt für Schritt erklärt</li>
       <li>${icon('chart')} Fortschritt und Ziele im Blick</li>
     </ul>
-    <button type="button" class="btn primary block lg" data-action="next">Los geht's</button>
-    <p class="muted small">Deine Daten bleiben auf deinem Gerät. Kein Konto nötig.</p>
     ${loginBox()}
+    <button type="button" class="btn primary block lg" data-action="next">Los geht's</button>
+    ${signedIn ? '' : html`<p class="muted small">Ohne Konto bleiben deine Daten nur auf diesem Gerät.</p>`}
   </div>`;
 }
 
 function loginBox() {
   const { user, providers } = accountInfo();
   if (user) {
-    return html`<div class="login-box"><p class="small"><strong>Du bist angemeldet.</strong> In deinem Konto sind noch keine Daten.
-      Richte SchoolBuddy jetzt ein, danach wird alles automatisch gespeichert.</p></div>`;
+    return html`<div class="login-box">
+      <p class="small"><strong>Angemeldet mit ${PROVIDER_NAMES[user.provider] || user.provider}.</strong> In deinem Konto sind noch keine Daten.
+        Richte SchoolBuddy jetzt ein, danach wird alles automatisch gespeichert.</p>
+      <button type="button" class="btn ghost sm" data-action="logout">Abmelden</button>
+    </div>`;
   }
   if (!providers.length) return '';
   return html`<div class="login-box">
-    <p class="small"><strong>Schon ein Konto?</strong> Melde dich an, um deine Daten auf dieses Gerät zu holen.</p>
+    <p class="small">Melde dich an, um deine Lerndaten auf all deinen Geräten zu nutzen. Hast du schon ein Konto, kommen deine Daten so auf dieses Gerät.</p>
     ${providerButtons(providers)}
   </div>`;
 }

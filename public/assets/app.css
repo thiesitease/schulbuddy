@@ -1405,6 +1405,8 @@ input[type='radio'] { width: 20px; height: 20px; accent-color: var(--accent); fl
   text-align: left;
 }
 
+.login-box > .btn { justify-self: start; }
+
 .legal-page { padding-bottom: 48px; line-height: 1.6; }
 .legal-page h1 { margin-bottom: 6px; }
 .legal-page h2 { margin: 24px 0 8px; }
