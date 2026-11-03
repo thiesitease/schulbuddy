@@ -1,0 +1,73 @@
+// Service Worker, Updates und Installations-Hinweis.
+import { toast } from './ui.js';
+
+let deferredPrompt = null;
+const listeners = new Set();
+const notify = () => listeners.forEach((fn) => fn());
+
+export const isStandalone = () =>
+  matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+export const isIOS = () =>
+  /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+export const canInstall = () => !!deferredPrompt;
+
+export function onInstallChange(fn) {
+  listeners.add(fn);
+}
+
+export async function promptInstall() {
+  if (!deferredPrompt) return false;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  notify();
+  return outcome === 'accepted';
+}
+
+export function initPWA() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    notify();
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    notify();
+    toast('SchulBuddy ist jetzt installiert 🎉');
+  });
+
+  if (!('serviceWorker' in navigator)) return;
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloading) return;
+    reloading = true;
+    location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('sw.js');
+      const offerUpdate = (worker) =>
+        toast('Eine neue Version von SchulBuddy ist da.', {
+          action: 'Aktualisieren',
+          timeout: 0,
+          onAction: () => worker.postMessage('skipWaiting'),
+        });
+      if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const worker = reg.installing;
+        worker?.addEventListener('statechange', () => {
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(worker);
+        });
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') reg.update().catch(() => {});
+      });
+    } catch (err) {
+      console.warn('SchulBuddy: Service Worker nicht registriert', err);
+    }
+  });
+}

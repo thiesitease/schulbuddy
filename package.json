@@ -1,0 +1,13 @@
+{
+  "name": "schulbuddy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SchulBuddy – PWA für Lernpläne, Karteikarten, Quiz und KI-Lernhilfe",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/*.test.mjs\"",
+    "build": "node tools/build.mjs",
+    "icons": "node tools/make-icons.mjs",
+    "serve": "python -m http.server 5173 --directory public"
+  }
+}

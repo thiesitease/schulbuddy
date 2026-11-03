@@ -1,0 +1,26 @@
+{
+  "id": "./",
+  "name": "SchulBuddy – Lernplaner",
+  "short_name": "SchulBuddy",
+  "description": "Automatische Lernpläne für Klassenarbeiten, Karteikarten, Quiz und KI-Lernhilfe. Deine Schule. Dein Plan. Dein Erfolg.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "./#/today",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f3f6fb",
+  "theme_color": "#0b2a5b",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "assets/icons/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Prüfung eintragen", "short_name": "Prüfung", "url": "./#/plan/exams", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Karteikarten wiederholen", "short_name": "Karteikarten", "url": "./#/learn/review/all", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Buddy fragen", "short_name": "Buddy", "url": "./#/buddy", "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

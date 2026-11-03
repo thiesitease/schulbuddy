@@ -1,0 +1,18 @@
+# Im api-Ordner sind nur die Endpunkte erreichbar. vendor/, lib/, data/ und die Konfiguration bleiben gesperrt.
+Options -Indexes
+
+<IfModule mod_authz_core.c>
+  Require all denied
+  <FilesMatch "^(ai|auth|callback|sync)\.php$">
+    Require all granted
+  </FilesMatch>
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+  <FilesMatch "^(ai|auth|callback|sync)\.php$">
+    Order deny,allow
+    Allow from all
+  </FilesMatch>
+</IfModule>

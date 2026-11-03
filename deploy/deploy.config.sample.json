@@ -1,0 +1,7 @@
+{
+  "protocol": "sftp",
+  "host": "SERVERNAME-AUS-DEM-MANITU-KUNDENMENUE",
+  "port": 22,
+  "user": "BENUTZERNAME",
+  "remotePath": "/VERZEICHNIS-DER-SUBDOMAIN"
+}

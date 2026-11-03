@@ -1,0 +1,13 @@
+node_modules/
+dist/
+
+# Server: Abhängigkeiten, Geheimnisse, Laufzeitdaten
+public/api/vendor/
+public/api/config.php
+public/api/data/
+
+# Zugangsdaten für das Hochladen
+deploy/deploy.config.json
+
+# Lokale Einstellungen
+.claude/settings.local.json
