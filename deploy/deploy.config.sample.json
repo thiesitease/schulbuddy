@@ -1,7 +1,7 @@
 {
-  "protocol": "sftp",
-  "host": "SERVERNAME-AUS-DEM-MANITU-KUNDENMENUE",
+  "protocol": "ssh",
+  "host": "SSH-HOST-ODER-ALIAS-AUS-~/.ssh/config",
   "port": 22,
-  "user": "BENUTZERNAME",
-  "remotePath": "/VERZEICHNIS-DER-SUBDOMAIN"
+  "user": "",
+  "remotePath": "/home/sites/SITE-ID/web/schoolbuddy.thiesreinhold.de"
 }
