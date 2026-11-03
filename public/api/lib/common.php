@@ -27,7 +27,7 @@ function sb_config(): array
         'allowed_origins' => [],
         'salt' => '',
         'data_dir' => $api . '/data',
-        // Öffentliche Adresse der App, z. B. https://schulbuddy.thiesreinhold.de (für Login-Weiterleitungen).
+        // Öffentliche Adresse der App, z. B. https://schoolbuddy.hamburgrissen.de (für Login-Weiterleitungen).
         'app_url' => '',
         // Leer = SQLite-Datei im data-Ordner. Für MySQL z. B. 'mysql:host=localhost;dbname=...;charset=utf8mb4'.
         'db' => ['dsn' => '', 'user' => '', 'password' => ''],
@@ -41,10 +41,10 @@ function sb_config(): array
         'base_url' => null,
     ];
     // Gesucht wird: Umgebungsvariable, dann außerhalb des Webverzeichnisses
-    // (bei manitu: /home/sites/<site>/data-private[/schulbuddy-data], …/web, …), zuletzt api/config.php.
+    // (bei manitu: /home/sites/<site>/data-private[/schoolbuddy-data], …/web, …), zuletzt api/config.php.
     $files = [
         getenv('SCHULBUDDY_CONFIG') ?: '',
-        dirname($api, 3) . '/data-private/schulbuddy-data/schulbuddy-config.php',
+        dirname($api, 3) . '/data-private/schoolbuddy-data/schulbuddy-config.php',
         dirname($api, 3) . '/data-private/schulbuddy-config.php',
         dirname($api, 2) . '/schulbuddy-config.php',
         dirname($api, 3) . '/schulbuddy-config.php',

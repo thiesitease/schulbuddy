@@ -3,5 +3,5 @@
   "host": "SSH-HOST-ODER-ALIAS-AUS-~/.ssh/config",
   "port": 22,
   "user": "",
-  "remotePath": "/home/sites/SITE-ID/web/schulbuddy.thiesreinhold.de"
+  "remotePath": "/home/sites/SITE-ID/web/schoolbuddy.hamburgrissen.de"
 }

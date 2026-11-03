@@ -2,14 +2,15 @@
 
 // SchulBuddy – Server-Konfiguration
 //
-// Kopiere diese Datei als „schulbuddy-config.php“ in das Verzeichnis ÜBER dem Webverzeichnis
-// (empfohlen, dann ist sie nie per Browser erreichbar) oder als „config.php“ in diesen Ordner.
+// Kopiere diese Datei als „schulbuddy-config.php“ außerhalb des Webverzeichnisses (empfohlen, dann ist sie
+// nie per Browser erreichbar) – bei manitu nach /data-private/schoolbuddy-data/, sonst in das Verzeichnis
+// über dem Webverzeichnis – oder als „config.php“ in diesen Ordner.
 // Leere Werte = Funktion aus. Details zum Einrichten stehen in der README.
 
 return [
     // Öffentliche Adresse der App (ohne / am Ende). Daraus wird die Login-Rückkehradresse
-    // https://schulbuddy.thiesreinhold.de/api/callback.php gebildet.
-    'app_url' => 'https://schulbuddy.thiesreinhold.de',
+    // https://schoolbuddy.hamburgrissen.de/api/callback.php gebildet.
+    'app_url' => 'https://schoolbuddy.hamburgrissen.de',
 
     // --- KI (Anthropic) -------------------------------------------------------
     // Schlüssel unter https://platform.claude.com (Settings → API Keys); dort ein Ausgabenlimit setzen.
@@ -22,11 +23,15 @@ return [
     'limit_global' => 1500,
 
     // Zufälliger Text für Hashes (Konten, Tageslimits). Einmal festlegen und NIE mehr ändern,
-    // sonst findet niemand sein Konto wieder. Leer = wird automatisch in api/data/secret.key erzeugt.
+    // sonst findet niemand sein Konto wieder. Leer = wird automatisch als secret.key im data_dir erzeugt.
     'salt' => '',
 
+    // Ordner für Datenbank, Tageszähler und secret.key – am besten außerhalb des Webverzeichnisses.
+    // Ohne Angabe: api/data (per .htaccess gesperrt).
+    // 'data_dir' => '/home/sites/SITE-ID/data-private/schoolbuddy-data',
+
     // --- Konten ---------------------------------------------------------------
-    // Leer = SQLite-Datei in api/data (keine Einrichtung nötig). Für MySQL bei manitu z. B.:
+    // Leer = SQLite-Datei im data_dir (keine Einrichtung nötig). Für MySQL bei manitu z. B.:
     // 'db' => ['dsn' => 'mysql:host=localhost;dbname=DBNAME;charset=utf8mb4', 'user' => 'DBUSER', 'password' => 'DBPASS'],
     'db' => ['dsn' => '', 'user' => '', 'password' => ''],
     'session_days' => 180,
