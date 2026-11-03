@@ -28,7 +28,6 @@ app.innerHTML = String(html`
     <a class="brand" href="#/today" aria-label="SchoolBuddy – zur Startseite">${LOGO}<span>SchoolBuddy</span></a>
     <span class="offline-pill" hidden>${icon('info')} Offline</span>
     <nav class="topbar-actions" aria-label="Weitere">
-      <a class="icon-btn" href="#/premium" aria-label="Premium">${icon('crown')}</a>
       <a class="icon-btn" href="#/settings" aria-label="Einstellungen">${icon('sliders')}</a>
     </nav>
   </header>
@@ -138,17 +137,23 @@ if (loginResult) {
   history.replaceState(null, '', '#/settings');
 }
 
+// Nach dem Login erst rendern, wenn der Stand aus dem Konto da ist. Sonst blitzt kurz
+// das Onboarding mit „In deinem Konto sind noch keine Daten“ auf.
+let booting = loginResult === 'ok';
 onAccountChange((kind) => {
-  if (kind === 'info' || kind === 'data') render();
+  if (!booting && (kind === 'info' || kind === 'data')) render();
 });
 
 initPWA();
 updateOnline();
-if (loginResult === 'ok') {
-  // Erst den Stand aus dem Konto holen, damit nicht kurz das Onboarding aufblitzt.
+if (booting) {
   view.innerHTML = String(html`<div class="splash">${LOGO}<p>Anmeldung wird abgeschlossen …</p></div>`);
-  await initAccount();
-  render();
+  try {
+    await initAccount();
+  } finally {
+    booting = false;
+    render();
+  }
 } else {
   render();
   initAccount();

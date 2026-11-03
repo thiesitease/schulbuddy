@@ -30,6 +30,15 @@ if (!$user) {
     fail(401, 'Bitte melde dich an.', ['auth' => false]);
 }
 
+/** Der Chatverlauf bleibt auf dem Gerät. Ältere App-Versionen schicken ihn noch mit. */
+function without_chat(mixed $data): mixed
+{
+    if ($data instanceof stdClass) {
+        unset($data->chat);
+    }
+    return $data;
+}
+
 /** @return array{rev: int, data: mixed, updatedAt: int}|null */
 function current_data(PDO $db, string $userId): ?array
 {
@@ -37,7 +46,7 @@ function current_data(PDO $db, string $userId): ?array
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     // Als Objekte dekodieren, damit {} nicht zu [] wird.
-    return $row ? ['rev' => (int) $row['rev'], 'data' => json_decode($row['data']), 'updatedAt' => (int) $row['updated_at']] : null;
+    return $row ? ['rev' => (int) $row['rev'], 'data' => without_chat(json_decode($row['data'])), 'updatedAt' => (int) $row['updated_at']] : null;
 }
 
 function conflict(PDO $db, string $userId): never
@@ -59,7 +68,7 @@ if ($method !== 'PUT' && $method !== 'POST') {
 require_same_origin($config);
 $body = read_json_body(MAX_DATA_BYTES + 100_000, false);
 $baseRev = (int) ($body->baseRev ?? -1);
-$data = $body->data ?? null;
+$data = without_chat($body->data ?? null);
 if (!$data instanceof stdClass || $baseRev < 0) {
     fail(400, 'Ungültige Daten.');
 }

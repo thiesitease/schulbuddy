@@ -1,6 +1,6 @@
 // Buddy: KI-Lernassistent (Chat) und Hausaufgaben-Scanner.
 import { getState, update } from '../store.js';
-import { html, icon, md, toast, confirmDialog, resizeImage, LOGO } from '../ui.js';
+import { html, icon, md, toast, confirmDialog, resizeImage, plural, LOGO } from '../ui.js';
 import { tabs, pageHead } from '../components.js';
 import { subjectOptions } from '../forms.js';
 import { askAI, aiStatus, ensureConsent } from '../ai.js';
@@ -45,7 +45,7 @@ async function showStatus(root) {
       : 'Buddy ist gerade nicht erreichbar. Alle anderen Funktionen gehen trotzdem.'}</span>`);
   } else if (typeof status.remaining === 'number' && status.remaining <= 5) {
     el.hidden = false;
-    el.innerHTML = String(html`${icon('info')}<span>Heute noch ${status.remaining} KI-Anfragen frei. Mit Premium gibt es bald mehr.</span>`);
+    el.innerHTML = String(html`${icon('info')}<span>Heute noch ${plural(status.remaining, 'KI-Anfrage', 'KI-Anfragen')} frei.</span>`);
   }
 }
 

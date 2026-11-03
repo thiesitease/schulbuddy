@@ -77,7 +77,7 @@ $limits = [$deviceKey => (int) $config['limit_per_device'], $ipKey => (int) $con
 $hit = $limiter->exceeded($limits);
 if ($hit !== null) {
     fail(429, $hit === $deviceKey
-        ? 'Du hast dein KI-Tageslimit erreicht. Morgen geht es weiter – oder bald mit Premium. 🙂'
+        ? 'Du hast dein KI-Tageslimit erreicht. Morgen geht es weiter. 🙂'
         : 'Buddy ist heute schon sehr gefragt. Bitte versuch es morgen wieder.');
 }
 

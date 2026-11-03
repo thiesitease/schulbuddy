@@ -146,6 +146,12 @@ $noOrigin = $http->put('/api/sync.php', ['json' => ['baseRev' => 3, 'data' => ['
 check($noOrigin->getStatusCode() === 403, 'Speichern ohne Origin wird abgelehnt (CSRF-Schutz)');
 $bad = $http->put('/api/sync.php', ['headers' => ORIGIN, 'json' => ['baseRev' => 3, 'data' => [1, 2, 3]]]);
 check($bad->getStatusCode() === 400, 'Ungültige Daten werden abgelehnt');
+// Ältere App-Versionen schicken den Chatverlauf noch mit; er darf nicht auf dem Server landen.
+$chatPut = $http->put('/api/sync.php', ['headers' => ORIGIN, 'json' => ['baseRev' => 3, 'data' => ['exams' => [], 'chat' => [['role' => 'user', 'text' => 'Geheime Chatfrage']]]]]);
+$chatGet = body($http->get('/api/sync.php'));
+$dbBytes = implode('', array_map(static fn (string $f): string => (string) file_get_contents($f), glob(sys_get_temp_dir() . '/sb-test-data/schulbuddy.sqlite*') ?: []));
+check(body($chatPut)['rev'] === 4 && is_array($chatGet['data'] ?? null) && !array_key_exists('chat', $chatGet['data']) && !str_contains($dbBytes, 'Geheime Chatfrage'),
+    'Chatverlauf wird nicht im Konto gespeichert', $chatGet);
 $anon = client(new CookieJar())->get('/api/sync.php');
 check($anon->getStatusCode() === 401, 'Ohne Anmeldung keine Daten');
 
@@ -165,7 +171,7 @@ echo "Abmelden\n";
 $logout = $http->post('/api/auth.php?action=logout', ['headers' => ORIGIN]);
 check(body($logout)['ok'] ?? false, 'Abmelden');
 check($http->get('/api/sync.php')->getStatusCode() === 401, 'Nach dem Abmelden kein Zugriff mehr');
-check(login($http, $jar) === 'ok' && body($http->get('/api/sync.php'))['rev'] === 3, 'Neu anmelden → Daten sind wieder da');
+check(login($http, $jar) === 'ok' && body($http->get('/api/sync.php'))['rev'] === 4, 'Neu anmelden → Daten sind wieder da');
 
 echo "KI-Proxy\n";
 $last = static fn () => json_decode((string) file_get_contents(sys_get_temp_dir() . '/sb-mock-anthropic-last.json'), true);

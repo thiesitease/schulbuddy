@@ -65,7 +65,7 @@ export function ensureConsent() {
       title: 'Bevor du die KI nutzt',
       body: html`<div class="stack">
         <ul class="checklist">
-          <li>Deine Frage oder dein Foto wird zur Beantwortung an unseren KI-Anbieter <strong>Anthropic</strong> übertragen. SchoolBuddy speichert sie nicht.</li>
+          <li>Deine Frage oder dein Foto wird zur Beantwortung an unseren KI-Anbieter <strong>Anthropic</strong> übertragen. Auf dem SchoolBuddy-Server speichern wir sie nicht. Der Chatverlauf bleibt nur auf deinem Gerät, auch mit Konto.</li>
           <li>Schreib keine persönlichen Daten wie Namen, Adressen oder Telefonnummern in deine Fragen und fotografiere keine Gesichter.</li>
           <li>Die KI kann sich irren. Prüf wichtige Ergebnisse nach und frag im Zweifel deine Lehrkraft.</li>
           <li>Bist du jünger als 16, frag bitte vorher deine Eltern.</li>

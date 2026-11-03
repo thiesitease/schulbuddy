@@ -1,4 +1,4 @@
-// Alle Daten bleiben auf dem Gerät (localStorage). Es gibt kein Konto und keinen Server-Speicher.
+// Alle Daten liegen auf dem Gerät (localStorage). Mit Konto gleicht account.js sie zusätzlich mit dem Server ab.
 import { todayISO } from './dates.js';
 
 const KEY = 'schulbuddy';

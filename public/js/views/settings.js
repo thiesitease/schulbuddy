@@ -54,6 +54,8 @@ export default {
     const weekTotal = st.minutesByWeekday.reduce((a, b) => a + b, 0);
     const allSubjects = [...SUBJECTS, ...p.subjects.filter((x) => !SUBJECTS.includes(x))];
     const permission = notificationsSupported() ? Notification.permission : 'unsupported';
+    // Mit Konto kämen gelöschte Daten beim nächsten Abgleich zurück, daher dort kein „Alles löschen“.
+    const signedIn = !!accountInfo().user;
 
     root.innerHTML = String(html`
       ${pageHead('Einstellungen')}
@@ -107,16 +109,17 @@ export default {
         <h2 id="set-ai">${icon('sparkles')} KI-Funktionen</h2>
         <p class="small" data-ai-info>Status wird geprüft …</p>
         ${s.meta.aiConsent ? html`<button type="button" class="btn ghost sm" data-action="revoke-ai">Einwilligung zurücknehmen</button>` : ''}
-        <a class="btn light block" href="#/premium">${icon('crown')} SchoolBuddy Premium ansehen</a>
       </section>
 
       <section class="card stack" aria-labelledby="set-data">
         <h2 id="set-data">${icon('download')} Deine Daten</h2>
-        <p class="muted small">Alles bleibt auf diesem Gerät. Sichere deine Daten regelmäßig, z. B. bevor du das Handy wechselst.</p>
+        <p class="muted small">${signedIn
+          ? 'Deine Daten liegen auf diesem Gerät und in deinem Konto. Abmelden entfernt sie von diesem Gerät, „Konto löschen“ auch vom Server.'
+          : 'Alles bleibt auf diesem Gerät. Sichere deine Daten regelmäßig, z. B. bevor du das Handy wechselst.'}</p>
         <div class="row wrap gap">
           <button type="button" class="btn ghost sm" data-action="export">${icon('download')} Sichern</button>
           <label class="btn ghost sm file-btn">${icon('upload')} Wiederherstellen<input type="file" accept="application/json,.json" data-import hidden></label>
-          <button type="button" class="btn ghost sm danger-text" data-action="reset">${icon('trash')} Alles löschen</button>
+          ${signedIn ? '' : html`<button type="button" class="btn ghost sm danger-text" data-action="reset">${icon('trash')} Alles löschen</button>`}
         </div>
       </section>
 
@@ -138,7 +141,8 @@ export default {
       if (t.matches('[data-import]')) {
         const file = t.files[0];
         if (!file) return;
-        if (!(await confirmDialog('Die aktuellen Daten auf diesem Gerät werden durch die Sicherung ersetzt.', { confirmText: 'Wiederherstellen', danger: false }))) return;
+        const target = accountInfo().user ? 'auf diesem Gerät und in deinem Konto' : 'auf diesem Gerät';
+        if (!(await confirmDialog(`Die aktuellen Daten ${target} werden durch die Sicherung ersetzt.`, { confirmText: 'Wiederherstellen', danger: false }))) return;
         try {
           importJSON(await file.text());
           toast('Sicherung wiederhergestellt ✓');

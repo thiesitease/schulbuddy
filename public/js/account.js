@@ -55,11 +55,12 @@ const hasLocalData = (s) =>
   s.profile.onboarded &&
   (s.exams.length || s.homework.length || s.decks.length || s.goals.length || s.quizzes.length || Object.keys(s.completed).length);
 
-/** Was synchronisiert wird: alles außer gerätebezogenen Angaben. */
+/** Was synchronisiert wird: alles außer gerätebezogenen Angaben und dem Chatverlauf (bleibt auf dem Gerät). */
 function payload(s) {
   const data = structuredClone(s);
   for (const key of ['deviceId', 'installDismissed', 'sync', 'createdOn']) delete data.meta[key];
   delete data.settings.reminders;
+  delete data.chat;
   return data;
 }
 
@@ -73,6 +74,7 @@ function applyRemote(rev, data) {
   const local = getState();
   replaceState({
     ...data,
+    chat: local.chat,
     meta: {
       ...(data.meta || {}),
       deviceId: local.meta.deviceId,

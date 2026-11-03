@@ -18,8 +18,8 @@ Ziel-Adresse: **https://schoolbuddy.hamburgrissen.de** (Hosting: manitu)
 | Smart Reminders | Benachrichtigungen (Android/Chrome, installierte App) und Kalender-Export (.ics) mit Alarmen |
 | Digital Flashcards | Karteikasten mit 5 Fächern; KI erstellt Karten aus Lernzettel (Text oder Foto) |
 | Goal Setting | Wochen-/Monatsziele (Minuten, Einheiten, Karten, Quizze oder eigenes Ziel) |
-| Konto (optional) | Anmeldung über Microsoft, Google oder Apple; Lerndaten werden zwischen Geräten abgeglichen, mit Konfliktabfrage |
-| Premium | Preisseite (2,99 €/Monat, 19,99 €/Jahr) – Bezahlung noch nicht aktiv |
+| Konto (optional) | Anmeldung über Microsoft, Google oder Apple; Lerndaten werden zwischen Geräten abgeglichen, mit Konfliktabfrage. Der Chatverlauf bleibt auf dem Gerät. |
+| Premium | Preisseite (2,99 €/Monat, 19,99 €/Jahr) unter `#/premium`, nirgends verlinkt, bis die Bezahlung aktiv ist |
 
 Ohne Konto bleiben alle Lerndaten im Browser des Geräts. Sicherung/Wiederherstellung als JSON in den Einstellungen.
 
