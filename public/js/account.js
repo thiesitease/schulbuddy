@@ -222,6 +222,14 @@ export async function initAccount() {
   }
   emit('info');
   if (info.user) await pull();
+  // Schon eingerichtet, aber ohne Vornamen: den Namen vom Anbieter ins Profil übernehmen.
+  // Erst nach pull(), damit ein Name aus dem Konto Vorrang hat.
+  const { profile } = getState();
+  if (info.user && givenName && profile.onboarded && !profile.name) {
+    update((s) => {
+      s.profile.name = givenName;
+    });
+  }
 }
 
 export function login(provider) {
