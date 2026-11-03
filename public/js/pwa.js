@@ -35,7 +35,7 @@ export function initPWA() {
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     notify();
-    toast('SchulBuddy ist jetzt installiert 🎉');
+    toast('SchoolBuddy ist jetzt installiert 🎉');
   });
 
   if (!('serviceWorker' in navigator)) return;
@@ -56,7 +56,7 @@ export function initPWA() {
       const offerUpdate = () => {
         if (offered) return;
         offered = true;
-        toast('Eine neue Version von SchulBuddy ist da.', {
+        toast('Eine neue Version von SchoolBuddy ist da.', {
           action: 'Aktualisieren',
           timeout: 0,
           onAction: () => (reg.waiting ? reg.waiting.postMessage('skipWaiting') : location.reload()),
@@ -73,7 +73,7 @@ export function initPWA() {
         if (document.visibilityState === 'visible') reg.update().catch(() => {});
       });
     } catch (err) {
-      console.warn('SchulBuddy: Service Worker nicht registriert', err);
+      console.warn('SchoolBuddy: Service Worker nicht registriert', err);
     }
   });
 }

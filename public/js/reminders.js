@@ -93,7 +93,7 @@ export async function disableNotifications() {
 
 export async function testNotification() {
   const reg = await navigator.serviceWorker.ready;
-  await reg.showNotification('SchulBuddy', {
+  await reg.showNotification('SchoolBuddy', {
     body: 'So sehen deine Erinnerungen aus. 👋',
     icon: 'assets/icons/icon-192.png',
     tag: 'sb-test',
@@ -135,7 +135,7 @@ export function buildICS(state, { sessions = true } = {}) {
   const today = todayISO();
   const time = state.settings.reminderTime || '16:00';
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+Z$/, 'Z');
-  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SchulBuddy//Lernplan//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:SchulBuddy'];
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//SchoolBuddy//Lernplan//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:SchoolBuddy'];
   const event = (id, date, summary, description, alarm) => {
     lines.push('BEGIN:VEVENT', `UID:${id}@${SITE}`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${icsDate(date)}`,
       `DTEND;VALUE=DATE:${icsDate(addDays(date, 1))}`, `SUMMARY:${icsText(summary)}`, 'TRANSP:TRANSPARENT');
@@ -160,7 +160,7 @@ export function buildICS(state, { sessions = true } = {}) {
         const exam = state.exams.find((e) => e.id === s.examId);
         return `• ${exam?.subject}: ${s.kind === 'final' ? 'Generalprobe' : s.topic} (${s.minutes} Min.)`;
       });
-      event(`plan-${d}`, d, `📚 Lernen (${day.used} Min.)`, `${list.join('\n')}\n\nStand: ${today}. Der aktuelle Plan steht in SchulBuddy.`, trigger(time, false));
+      event(`plan-${d}`, d, `📚 Lernen (${day.used} Min.)`, `${list.join('\n')}\n\nStand: ${today}. Der aktuelle Plan steht in SchoolBuddy.`, trigger(time, false));
     }
   }
   lines.push('END:VCALENDAR');

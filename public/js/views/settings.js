@@ -14,7 +14,7 @@ function syncLabel() {
   const { state, dirty, at } = syncStatus();
   if (state === 'syncing') return 'Wird synchronisiert …';
   if (state === 'offline') return 'Offline – wird synchronisiert, sobald du wieder online bist.';
-  if (state === 'error') return 'Synchronisierung hat nicht geklappt. SchulBuddy versucht es erneut.';
+  if (state === 'error') return 'Synchronisierung hat nicht geklappt. SchoolBuddy versucht es erneut.';
   if (dirty) return 'Änderungen werden gleich gespeichert …';
   if (!at) return 'Noch nicht synchronisiert.';
   const minutes = Math.round((Date.now() - at) / 60000);
@@ -42,7 +42,7 @@ function accountCard() {
     <h2 id="set-account">${icon('cloud')} Konto <span class="badge">optional</span></h2>
     <p class="small">Melde dich an, um deine Lerndaten auf Handy, Tablet und Computer zu nutzen. Ohne Konto bleibt alles nur auf diesem Gerät.</p>
     ${providerButtons(info.providers)}
-    <p class="muted small">SchulBuddy bekommt dabei weder deinen Namen noch deine E-Mail-Adresse, nur eine anonyme Kennung. <a href="datenschutz.html">Mehr dazu</a></p>
+    <p class="muted small">SchoolBuddy bekommt dabei weder deinen Namen noch deine E-Mail-Adresse, nur eine anonyme Kennung. <a href="datenschutz.html">Mehr dazu</a></p>
   </section>`;
 }
 
@@ -74,7 +74,7 @@ export default {
 
       <section class="card stack" aria-labelledby="set-time" id="lernzeiten">
         <h2 id="set-time">${icon('clock')} Lernzeiten</h2>
-        <p class="muted small">So viel Zeit plant SchulBuddy pro Tag für dich ein. Zusammen: ${formatMinutes(weekTotal)} pro Woche.</p>
+        <p class="muted small">So viel Zeit plant SchoolBuddy pro Tag für dich ein. Zusammen: ${formatMinutes(weekTotal)} pro Woche.</p>
         <div class="weekdays">${WEEKDAYS_LONG.map((d, i) => html`<label class="field inline"><span>${d}</span>
           <select name="day-${i}">${MINUTE_OPTIONS.map((m) => html`<option value="${m}" ${m === st.minutesByWeekday[i] ? 'selected' : ''}>${m ? `${m} Min.` : 'frei'}</option>`)}</select></label>`)}</div>
         <label class="field"><span>Länge einer Lerneinheit</span><select name="sessionMinutes">${[15, 20, 25, 30, 45].map((m) => html`<option value="${m}" ${m === st.sessionMinutes ? 'selected' : ''}>${m} Minuten</option>`)}</select>
@@ -88,7 +88,7 @@ export default {
           : html`<label class="switch-row"><span><strong>Benachrichtigungen</strong><small class="muted">An Lerneinheiten, Prüfungen und Hausaufgaben am Vortag</small></span>
               <input type="checkbox" role="switch" name="reminders" ${st.reminders && permission === 'granted' ? 'checked' : ''}></label>
             ${permission === 'denied' ? html`<p class="form-error">Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Website-Einstellungen.</p>` : ''}
-            <p class="muted small">${isIOS() && !isStandalone() ? 'Auf dem iPhone funktionieren Benachrichtigungen nur, wenn SchulBuddy auf dem Home-Bildschirm installiert ist.' : 'Hintergrund-Erinnerungen klappen am besten mit installierter App unter Android. Das Gerät entscheidet, wann geprüft wird.'}</p>
+            <p class="muted small">${isIOS() && !isStandalone() ? 'Auf dem iPhone funktionieren Benachrichtigungen nur, wenn SchoolBuddy auf dem Home-Bildschirm installiert ist.' : 'Hintergrund-Erinnerungen klappen am besten mit installierter App unter Android. Das Gerät entscheidet, wann geprüft wird.'}</p>
             ${st.reminders && permission === 'granted' ? html`<button type="button" class="btn ghost sm" data-action="test-notification">Test-Benachrichtigung</button>` : ''}`}
         <label class="field inline"><span>Uhrzeit für Erinnerungen</span><input type="time" name="reminderTime" value="${st.reminderTime}"></label>
         <div class="row between wrap gap"><span class="small">Am zuverlässigsten: Termine in den Handy-Kalender übernehmen.</span>
@@ -100,14 +100,14 @@ export default {
         <fieldset class="field"><legend>Farbschema</legend><div class="choice">
           ${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([v, l]) => html`<label><input type="radio" name="theme" value="${v}" ${st.theme === v ? 'checked' : ''}><span>${l}</span></label>`)}
         </div></fieldset>
-        ${canInstall() ? html`<button type="button" class="btn ghost" data-action="install">${icon('download')} SchulBuddy installieren</button>` : ''}
+        ${canInstall() ? html`<button type="button" class="btn ghost" data-action="install">${icon('download')} SchoolBuddy installieren</button>` : ''}
       </section>
 
       <section class="card stack" aria-labelledby="set-ai">
         <h2 id="set-ai">${icon('sparkles')} KI-Funktionen</h2>
         <p class="small" data-ai-info>Status wird geprüft …</p>
         ${s.meta.aiConsent ? html`<button type="button" class="btn ghost sm" data-action="revoke-ai">Einwilligung zurücknehmen</button>` : ''}
-        <a class="btn light block" href="#/premium">${icon('crown')} SchulBuddy Premium ansehen</a>
+        <a class="btn light block" href="#/premium">${icon('crown')} SchoolBuddy Premium ansehen</a>
       </section>
 
       <section class="card stack" aria-labelledby="set-data">
@@ -120,7 +120,7 @@ export default {
         </div>
       </section>
 
-      <p class="legal muted small">SchulBuddy 1.0 · Deine Schule. Dein Plan. Dein Erfolg.</p>
+      <p class="legal muted small">SchoolBuddy 1.0 · Deine Schule. Dein Plan. Dein Erfolg.</p>
     `);
 
     aiStatus(true).then((status) => {
@@ -161,7 +161,7 @@ export default {
         if (t.checked) {
           const result = await enableNotifications();
           update((x) => { x.settings.reminders = result.permission === 'granted'; });
-          if (result.permission !== 'granted') toast('Ohne Erlaubnis kann SchulBuddy keine Benachrichtigungen senden.');
+          if (result.permission !== 'granted') toast('Ohne Erlaubnis kann SchoolBuddy keine Benachrichtigungen senden.');
           else toast(result.background ? 'Erinnerungen sind an 🔔' : 'Erinnerungen sind an. Hintergrund-Prüfung wird von diesem Gerät nicht unterstützt – nutze zusätzlich den Kalender-Export.', { timeout: 6000 });
         } else {
           await disableNotifications();
@@ -215,7 +215,7 @@ export default {
         update((x) => { x.profile.subjects = current.includes(name) ? current.filter((y) => y !== name) : [...current, name]; });
         ctx.refresh();
       } else if (action === 'test-notification') testNotification().catch(() => toast('Test fehlgeschlagen.'));
-      else if (action === 'ics') downloadFile(`schulbuddy-${todayISO()}.ics`, buildICS(getState()), 'text/calendar;charset=utf-8');
+      else if (action === 'ics') downloadFile(`schoolbuddy-${todayISO()}.ics`, buildICS(getState()), 'text/calendar;charset=utf-8');
       else if (action === 'install') {
         await promptInstall();
         ctx.refresh();
@@ -224,7 +224,7 @@ export default {
         toast('Einwilligung zurückgenommen. Vor der nächsten KI-Nutzung fragen wir erneut.');
         ctx.refresh();
       } else if (action === 'export') {
-        downloadFile(`schulbuddy-sicherung-${todayISO()}.json`, exportJSON());
+        downloadFile(`schoolbuddy-sicherung-${todayISO()}.json`, exportJSON());
         toast('Sicherung heruntergeladen ✓');
       } else if (action === 'reset') {
         if (await confirmDialog('Wirklich alle Prüfungen, Karteikarten, Ziele und Einstellungen auf diesem Gerät löschen? Das lässt sich nicht rückgängig machen.', { confirmText: 'Alles löschen' })) {

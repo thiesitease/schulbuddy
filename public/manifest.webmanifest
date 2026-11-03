@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": "SchulBuddy – Lernplaner",
-  "short_name": "SchulBuddy",
+  "name": "SchoolBuddy – Lernplaner",
+  "short_name": "SchoolBuddy",
   "description": "Automatische Lernpläne für Klassenarbeiten, Karteikarten, Quiz und KI-Lernhilfe. Deine Schule. Dein Plan. Dein Erfolg.",
   "lang": "de",
   "dir": "ltr",

@@ -9,7 +9,7 @@ export default {
   render(root) {
     root.innerHTML = String(html`
       <a class="back" href="#/settings">${icon('left')} Einstellungen</a>
-      ${pageHead('SchulBuddy Premium', 'Mehr KI, mehr Quizze, mehr Erfolg.')}
+      ${pageHead('SchoolBuddy Premium', 'Mehr KI, mehr Quizze, mehr Erfolg.')}
       <div class="plans">
         <article class="plan">
           <h2>Kostenlos</h2>
@@ -30,7 +30,7 @@ export default {
         <h3>${icon('book')} Lernpakete</h3>
         <p class="small">Fertige Quizze und Karteikarten für typische Klassenarbeiten, z. B. „Mathe Klasse 8: Lineare Funktionen“ oder „Englisch: Irregular Verbs“. Einzeln kaufbar, sobald Premium startet.</p>
       </div>
-      <p class="muted small">SchulBuddy befindet sich in der Testphase. Premium und Lernpakete sind noch nicht buchbar. Du bekommst keine Kosten, ohne vorher ausdrücklich zuzustimmen.</p>
+      <p class="muted small">SchoolBuddy befindet sich in der Testphase. Premium und Lernpakete sind noch nicht buchbar. Du bekommst keine Kosten, ohne vorher ausdrücklich zuzustimmen.</p>
     `);
   },
 };

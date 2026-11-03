@@ -81,7 +81,7 @@ export default {
                 <span class="grow"><strong>${x.deck.name}</strong><span class="muted small"> · ${plural(x.hard.length, 'Karte', 'Karten')} oft vergessen</span></span>
                 <a class="btn ghost sm" href="#/learn/review/${x.deck.id}">Wiederholen</a></li>`)}
             </ul>`
-          : html`<p class="muted card soft">${s.quizzes.length ? 'Keine Lücken gefunden – weiter so! 🎯' : 'Mach ein paar Quizze, dann zeigt SchulBuddy dir hier, welche Themen du noch üben solltest.'}</p>`}
+          : html`<p class="muted card soft">${s.quizzes.length ? 'Keine Lücken gefunden – weiter so! 🎯' : 'Mach ein paar Quizze, dann zeigt SchoolBuddy dir hier, welche Themen du noch üben solltest.'}</p>`}
       </section>
 
       ${bySubject.length || subjectScores.length ? html`<section class="section">

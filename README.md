@@ -1,4 +1,4 @@
-# SchulBuddy – Deine Schule. Dein Plan. Dein Erfolg.
+# SchoolBuddy – Deine Schule. Dein Plan. Dein Erfolg.
 
 Progressive Web App für Schülerinnen und Schüler der Klassen 7–12: automatische Lernpläne für Klassenarbeiten,
 Hausaufgaben mit Erinnerungen, Karteikarten (Leitner-System), Quiz, Ziele, Fortschritt, eine KI-Lernhilfe und

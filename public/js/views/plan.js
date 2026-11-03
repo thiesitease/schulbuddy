@@ -57,7 +57,7 @@ export default {
         const task = findSession(plan, key);
         if (task) openFocus(task, examsById.get(task.examId), () => { toast('Einheit erledigt ✓'); ctx.refresh(); });
       } else if (action === 'export-ics') {
-        downloadFile(`schulbuddy-${today}.ics`, buildICS(s), 'text/calendar;charset=utf-8');
+        downloadFile(`schoolbuddy-${today}.ics`, buildICS(s), 'text/calendar;charset=utf-8');
         toast('Kalenderdatei erstellt. Öffne sie, um die Termine zu übernehmen.');
       }
     };
@@ -76,7 +76,7 @@ function planTab(s, plan, today, examsById) {
   const upcoming = s.exams.filter((e) => e.date >= today);
   if (!upcoming.length) {
     return emptyState('calendar', 'Dein Lernplan ist noch leer',
-      'Trag eine Klassenarbeit mit ihren Themen ein. SchulBuddy erstellt daraus automatisch einen Plan mit Lernen, Wiederholen und Generalprobe.',
+      'Trag eine Klassenarbeit mit ihren Themen ein. SchoolBuddy erstellt daraus automatisch einen Plan mit Lernen, Wiederholen und Generalprobe.',
       html`<button type="button" class="btn primary" data-action="add-exam">${icon('plus')} Erste Prüfung eintragen</button>`);
   }
   const examDays = new Map();
@@ -131,7 +131,7 @@ function homeworkTab(s, today) {
   return html`
     ${open.length
       ? html`<ul class="list">${open.map((h) => homeworkRow(h, today))}</ul>`
-      : emptyState('pencil', 'Keine offenen Hausaufgaben', 'Trag Hausaufgaben mit Fälligkeitsdatum ein. SchulBuddy erinnert dich am Vortag.',
+      : emptyState('pencil', 'Keine offenen Hausaufgaben', 'Trag Hausaufgaben mit Fälligkeitsdatum ein. SchoolBuddy erinnert dich am Vortag.',
           html`<button type="button" class="btn primary" data-action="add-hw">${icon('plus')} Hausaufgabe eintragen</button>`)}
     ${done.length ? html`<section class="section">${sectionHead('Erledigt')}<ul class="list">${done.map((h) => homeworkRow(h, today))}</ul></section>` : ''}`;
 }

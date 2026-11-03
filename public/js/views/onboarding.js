@@ -87,7 +87,7 @@ export default {
 function welcome() {
   return html`<div class="welcome">
     ${LOGO}
-    <h1>SchulBuddy</h1>
+    <h1>SchoolBuddy</h1>
     <p class="slogan">Deine Schule. Dein Plan. Dein Erfolg.</p>
     <ul class="feature-list">
       <li>${icon('calendar')} Automatische Lernpläne für deine Klassenarbeiten</li>
@@ -105,7 +105,7 @@ function loginBox() {
   const { user, providers } = accountInfo();
   if (user) {
     return html`<div class="login-box"><p class="small"><strong>Du bist angemeldet.</strong> In deinem Konto sind noch keine Daten.
-      Richte SchulBuddy jetzt ein, danach wird alles automatisch gespeichert.</p></div>`;
+      Richte SchoolBuddy jetzt ein, danach wird alles automatisch gespeichert.</p></div>`;
   }
   if (!providers.length) return '';
   return html`<div class="login-box">

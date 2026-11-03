@@ -62,7 +62,7 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) return migrate(JSON.parse(raw));
   } catch (err) {
-    console.warn('SchulBuddy: Daten konnten nicht geladen werden', err);
+    console.warn('SchoolBuddy: Daten konnten nicht geladen werden', err);
   }
   return defaults();
 }
@@ -110,13 +110,13 @@ export function logActivity(s, field, amount, date = todayISO()) {
 }
 
 export function exportJSON() {
-  return JSON.stringify({ app: 'SchulBuddy', exportedAt: new Date().toISOString(), ...state }, null, 2);
+  return JSON.stringify({ app: 'SchoolBuddy', exportedAt: new Date().toISOString(), ...state }, null, 2);
 }
 
 export function importJSON(text) {
   const data = JSON.parse(text);
-  if (!data || data.app !== 'SchulBuddy' || !Array.isArray(data.exams)) {
-    throw new Error('Das ist keine SchulBuddy-Sicherung.');
+  if (!data || !['SchoolBuddy', 'SchulBuddy'].includes(data.app) || !Array.isArray(data.exams)) {
+    throw new Error('Das ist keine SchoolBuddy-Sicherung.');
   }
   delete data.app;
   delete data.exportedAt;

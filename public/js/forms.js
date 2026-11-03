@@ -36,7 +36,7 @@ export function openExamForm(exam, onSaved, preset = {}) {
       <label class="field"><span>Titel <em>(optional)</em></span><input name="title" value="${e.title || ''}" placeholder="z. B. Bruchrechnung" maxlength="80"></label>
       <label class="field"><span>Themen – eins pro Zeile</span>
         <textarea name="topics" rows="5" placeholder="z. B.\nBrüche kürzen und erweitern\nBrüche addieren\nTextaufgaben">${(e.topics || []).map((t) => t.name).join('\n')}</textarea>
-        <small class="muted">SchulBuddy plant für jedes Thema eine Lern- und eine Wiederholungseinheit.</small></label>
+        <small class="muted">SchoolBuddy plant für jedes Thema eine Lern- und eine Wiederholungseinheit.</small></label>
       ${difficultyField(e.difficulty)}
       ${past ? html`<label class="field"><span>Note <em>(optional)</em></span><input name="grade" value="${e.grade || ''}" maxlength="6" placeholder="z. B. 2+"></label>` : ''}
       <p class="form-error" role="alert" hidden></p>
@@ -58,7 +58,7 @@ export function openExamForm(exam, onSaved, preset = {}) {
           return;
         }
         if (isNew && date <= today) {
-          error.textContent = 'Das Datum muss in der Zukunft liegen, damit SchulBuddy einen Plan erstellen kann.';
+          error.textContent = 'Das Datum muss in der Zukunft liegen, damit SchoolBuddy einen Plan erstellen kann.';
           error.hidden = false;
           return;
         }

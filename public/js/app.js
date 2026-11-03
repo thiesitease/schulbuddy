@@ -25,7 +25,7 @@ const TABS = [
 const app = document.getElementById('app');
 app.innerHTML = String(html`
   <header class="topbar">
-    <a class="brand" href="#/today" aria-label="SchulBuddy – zur Startseite">${LOGO}<span>SchulBuddy</span></a>
+    <a class="brand" href="#/today" aria-label="SchoolBuddy – zur Startseite">${LOGO}<span>SchoolBuddy</span></a>
     <span class="offline-pill" hidden>${icon('info')} Offline</span>
     <nav class="topbar-actions" aria-label="Weitere">
       <a class="icon-btn" href="#/premium" aria-label="Premium">${icon('crown')}</a>

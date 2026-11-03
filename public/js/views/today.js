@@ -20,7 +20,7 @@ function greeting(name) {
 export function warningText(w, exam) {
   const label = `„${examLabel(exam)}“`;
   if (w.type === 'noTime') {
-    return `Vor ${label} hast du keine Lernzeit eingeplant. SchulBuddy hat ${dayTitle(w.date, todayISO())} trotzdem Einheiten vorgemerkt.`;
+    return `Vor ${label} hast du keine Lernzeit eingeplant. SchoolBuddy hat ${dayTitle(w.date, todayISO())} trotzdem Einheiten vorgemerkt.`;
   }
   if (w.type === 'short') {
     return `Für ${label} reicht deine Lernzeit nicht für alle Wiederholungen (${w.dropped} ${w.dropped === 1 ? 'fehlt' : 'fehlen'}). Tippe hier, um mehr Lernzeit einzuplanen.`;
@@ -57,7 +57,7 @@ export default {
     if (open.length) status = `Heute ${open.length === 1 ? 'steht' : 'stehen'} ${plural(open.length, 'Lerneinheit', 'Lerneinheiten')} an (${formatMinutes(open.reduce((n, t) => n + t.minutes, 0))}).`;
     else if (done.length) status = 'Stark! Für heute hast du alles geschafft. 🎉';
     else if (upcoming.length) status = 'Heute ist lernfrei. Genieß den Tag!';
-    else status = 'Trag deine nächste Prüfung ein, dann plant SchulBuddy für dich.';
+    else status = 'Trag deine nächste Prüfung ein, dann plant SchoolBuddy für dich.';
 
     root.innerHTML = String(html`
       <section class="hero">
@@ -76,7 +76,7 @@ export default {
 
       ${showInstall ? html`<div class="card install">
         <div>${icon('download')}</div>
-        <div class="grow"><strong>SchulBuddy als App installieren</strong>
+        <div class="grow"><strong>SchoolBuddy als App installieren</strong>
           <p class="muted small">${canInstall() ? 'Startet wie eine App und funktioniert auch offline.' : 'Tippe in Safari auf „Teilen“ und dann auf „Zum Home-Bildschirm“.'}</p></div>
         <div class="col">${canInstall() ? html`<button type="button" class="btn primary sm" data-action="install">Installieren</button>` : ''}
           <button type="button" class="btn ghost sm" data-action="dismiss-install">Später</button></div>
@@ -88,7 +88,7 @@ export default {
           ? html`<ul class="list">${done.map((d) => sessionRow(d.task, d.task.exam, today, { done: true }))}${open.map((t) => sessionRow(t, examsById.get(t.examId), today))}</ul>`
           : upcoming.length
             ? html`<p class="muted card soft">Heute ist nichts geplant.${nextDay ? ` Nächste Einheit: ${dayTitle(nextDay, today)}.` : ''}${cardsDue ? ' Wie wär’s mit ein paar Karteikarten?' : ''}</p>`
-            : emptyState('calendar', 'Noch keine Prüfung eingetragen', 'Trag deine nächste Klassenarbeit ein. SchulBuddy verteilt den Stoff automatisch auf die Tage davor.',
+            : emptyState('calendar', 'Noch keine Prüfung eingetragen', 'Trag deine nächste Klassenarbeit ein. SchoolBuddy verteilt den Stoff automatisch auf die Tage davor.',
                 html`<button type="button" class="btn primary" data-action="add-exam">${icon('plus')} Prüfung eintragen</button>`)}
       </section>
 
