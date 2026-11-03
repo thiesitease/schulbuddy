@@ -4,7 +4,7 @@ Progressive Web App für Schülerinnen und Schüler der Klassen 7–12: automati
 Hausaufgaben mit Erinnerungen, Karteikarten (Leitner-System), Quiz, Ziele, Fortschritt, eine KI-Lernhilfe und
 ein optionales Konto zum Synchronisieren zwischen Geräten.
 
-Ziel-Adresse: **https://schoolbuddy.thiesreinhold.de** (Hosting: manitu)
+Ziel-Adresse: **https://schulbuddy.thiesreinhold.de** (Hosting: manitu)
 
 ## Funktionen
 
@@ -64,7 +64,7 @@ brauchen PHP 8.1+ mit curl, openssl, mbstring und pdo_sqlite:
 
 ### 1. Subdomain einrichten (einmalig)
 
-1. Im manitu-Kundenmenü die Subdomain `schoolbuddy.thiesreinhold.de` anlegen und auf ein eigenes Verzeichnis zeigen lassen.
+1. Im manitu-Kundenmenü die Subdomain `schulbuddy.thiesreinhold.de` anlegen und auf ein eigenes Verzeichnis zeigen lassen.
 2. SSL-Zertifikat (Let's Encrypt) für die Subdomain aktivieren – ohne HTTPS funktioniert keine PWA und kein Login.
 3. PHP-Version für die Subdomain auf **8.1 oder neuer** stellen (Erweiterungen: curl, openssl, mbstring, pdo_sqlite bzw. pdo_mysql).
 
@@ -81,7 +81,7 @@ als `schulbuddy-config.php` (nie per Browser erreichbar). Alternativ als `public
 
 ### 3. Anmeldung einrichten (optional, je Anbieter)
 
-Für alle Anbieter gilt dieselbe Redirect-/Return-URL: **`https://schoolbuddy.thiesreinhold.de/api/callback.php`**.
+Für alle Anbieter gilt dieselbe Redirect-/Return-URL: **`https://schulbuddy.thiesreinhold.de/api/callback.php`**.
 Ein Anbieter erscheint in der App, sobald seine Daten in der Konfiguration stehen.
 
 - **Microsoft** (kostenlos): portal.azure.com → Microsoft Entra ID → App-Registrierungen → Neue Registrierung.
@@ -93,7 +93,7 @@ Ein Anbieter erscheint in der App, sobald seine Daten in der Konfiguration stehe
   App-Name, Support-E-Mail, autorisierte Domain `thiesreinhold.de`, nur Scope `openid`), dann Anmeldedaten →
   OAuth-Client-ID → Webanwendung mit der Redirect-URL.
 - **Apple** (Apple Developer Program, 99 €/Jahr): Identifiers → App ID mit „Sign in with Apple“ → Services ID
-  (= `client_id`) mit Domain `schoolbuddy.thiesreinhold.de` und der Return-URL → Keys → neuer Schlüssel mit
+  (= `client_id`) mit Domain `schulbuddy.thiesreinhold.de` und der Return-URL → Keys → neuer Schlüssel mit
   „Sign in with Apple“ (.p8 herunterladen, Key ID notieren). Dazu die Team ID. In der Konfiguration bei
   `private_key` den Pfad zur .p8-Datei (außerhalb des Webverzeichnisses) oder ihren Inhalt eintragen.
 
@@ -120,7 +120,7 @@ Bei späteren Updates ohne geänderte PHP-Abhängigkeiten: `./deploy/deploy.ps1 
 
 ### 6. Prüfen
 
-- https://schoolbuddy.thiesreinhold.de öffnen → Onboarding erscheint, App lässt sich installieren.
+- https://schulbuddy.thiesreinhold.de öffnen → Onboarding erscheint, App lässt sich installieren.
 - `/api/ai.php?status=1` → `"enabled": true`; `/api/auth.php?action=status` → die eingerichteten Anbieter.
 - `/api/config.php`, `/api/vendor/` und `/api/data/` → müssen **403** liefern.
 - Einmal mit jedem eingerichteten Anbieter anmelden und auf einem zweiten Gerät prüfen, ob die Daten ankommen.

@@ -27,7 +27,7 @@ function sb_config(): array
         'allowed_origins' => [],
         'salt' => '',
         'data_dir' => $api . '/data',
-        // Öffentliche Adresse der App, z. B. https://schoolbuddy.thiesreinhold.de (für Login-Weiterleitungen).
+        // Öffentliche Adresse der App, z. B. https://schulbuddy.thiesreinhold.de (für Login-Weiterleitungen).
         'app_url' => '',
         // Leer = SQLite-Datei im data-Ordner. Für MySQL z. B. 'mysql:host=localhost;dbname=...;charset=utf8mb4'.
         'db' => ['dsn' => '', 'user' => '', 'password' => ''],

@@ -8,8 +8,8 @@
 
 return [
     // Öffentliche Adresse der App (ohne / am Ende). Daraus wird die Login-Rückkehradresse
-    // https://schoolbuddy.thiesreinhold.de/api/callback.php gebildet.
-    'app_url' => 'https://schoolbuddy.thiesreinhold.de',
+    // https://schulbuddy.thiesreinhold.de/api/callback.php gebildet.
+    'app_url' => 'https://schulbuddy.thiesreinhold.de',
 
     // --- KI (Anthropic) -------------------------------------------------------
     // Schlüssel unter https://platform.claude.com (Settings → API Keys); dort ein Ausgabenlimit setzen.

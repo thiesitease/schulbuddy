@@ -5,7 +5,7 @@ import { buildPlan } from './planner.js';
 
 const DATA_CACHE = 'sb-data';
 const REMINDER_URL = './__sb/reminders.json';
-const SITE = 'schoolbuddy.thiesreinhold.de';
+const SITE = 'schulbuddy.thiesreinhold.de';
 
 function examName(exam) {
   return `${exam.subject}: ${exam.type || 'Klassenarbeit'}${exam.title ? ` – ${exam.title}` : ''}`;

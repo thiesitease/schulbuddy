@@ -112,4 +112,4 @@ echo "Online-Version ausgetauscht: `$T"
   default { throw "Unbekanntes Protokoll '$($cfg.protocol)'. Erlaubt: sftp, ftps." }
 }
 
-Write-Host 'Fertig. App öffnen: https://schoolbuddy.thiesreinhold.de' -ForegroundColor Green
+Write-Host 'Fertig. App öffnen: https://schulbuddy.thiesreinhold.de' -ForegroundColor Green
