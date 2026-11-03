@@ -152,6 +152,22 @@ $chatGet = body($http->get('/api/sync.php'));
 $dbBytes = implode('', array_map(static fn (string $f): string => (string) file_get_contents($f), glob(sys_get_temp_dir() . '/sb-test-data/schulbuddy.sqlite*') ?: []));
 check(body($chatPut)['rev'] === 4 && is_array($chatGet['data'] ?? null) && !array_key_exists('chat', $chatGet['data']) && !str_contains($dbBytes, 'Geheime Chatfrage'),
     'Chatverlauf wird nicht im Konto gespeichert', $chatGet);
+// Ältere Versionen hatten den Chat mit ins Konto gespeichert. Die Datenbank entfernt ihn einmalig.
+$dbFile = sys_get_temp_dir() . '/sb-test-data/schulbuddy.sqlite';
+$pdo = new PDO('sqlite:' . $dbFile);
+$row = $pdo->query('SELECT user_id, data FROM sb_user_data LIMIT 1')->fetch(PDO::FETCH_ASSOC);
+$old = json_decode($row['data']);
+$old->chat = [['role' => 'user', 'text' => 'Alte Chatfrage']];
+$pdo->prepare('UPDATE sb_user_data SET data = ? WHERE user_id = ?')->execute([json_encode($old), $row['user_id']]);
+$pdo->exec("DELETE FROM sb_meta WHERE name = 'data_version'");
+$pdo = null;
+$http->get('/api/auth.php?action=status');
+$pdo = new PDO('sqlite:' . $dbFile);
+$left = (int) $pdo->query("SELECT COUNT(*) FROM sb_user_data WHERE data LIKE '%Alte Chatfrage%'")->fetchColumn();
+$rev = (int) $pdo->query('SELECT rev FROM sb_user_data WHERE user_id = ' . $pdo->quote($row['user_id']))->fetchColumn();
+$pdo = null;
+$dbBytes = implode('', array_map(static fn (string $f): string => (string) file_get_contents($f), glob($dbFile . '*') ?: []));
+check($left === 0 && $rev === 4 && !str_contains($dbBytes, 'Alte Chatfrage'), 'Alte Chat-Kopien im Konto werden einmalig entfernt, auch aus der Datei', [$left, $rev]);
 $anon = client(new CookieJar())->get('/api/sync.php');
 check($anon->getStatusCode() === 401, 'Ohne Anmeldung keine Daten');
 
