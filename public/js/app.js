@@ -3,7 +3,7 @@ import { getState, onSaveError } from './store.js';
 import { html, icon, LOGO, toast } from './ui.js';
 import { syncReminders } from './reminders.js';
 import { initPWA, onInstallChange } from './pwa.js';
-import { initAccount, onAccountChange } from './account.js';
+import { initAccount, onAccountChange, rememberProviderName } from './account.js';
 import onboarding from './views/onboarding.js';
 import today from './views/today.js';
 import plan from './views/plan.js';
@@ -130,8 +130,13 @@ const LOGIN_MESSAGES = {
   deaktiviert: 'Diese Anmeldung ist gerade nicht verfügbar.',
   fehler: 'Die Anmeldung hat nicht geklappt. Versuch es später noch einmal.',
 };
-const loginResult = parseHash().query.get('login');
-if (loginResult) history.replaceState(null, '', '#/settings');
+const loginQuery = parseHash().query;
+const loginResult = loginQuery.get('login');
+if (loginResult) {
+  // Den Vornamen vom Anbieter nur im Speicher behalten und sofort aus der Adresse entfernen.
+  rememberProviderName(loginQuery.get('vorname'));
+  history.replaceState(null, '', '#/settings');
+}
 
 onAccountChange((kind) => {
   if (kind === 'info' || kind === 'data') render();

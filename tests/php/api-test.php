@@ -37,20 +37,37 @@ function body($response): array
     return json_decode((string) $response->getBody(), true) ?? [];
 }
 
+/** Rückkehr vom Test-Anbieter: Weiterleitung per GET oder, wie bei Apple, ein POST-Formular. */
+function return_from_idp(Client $http, $idp)
+{
+    $html = (string) $idp->getBody();
+    if ($idp->getStatusCode() === 200 && preg_match('/<form method="post" action="([^"]+)">/', $html, $form)) {
+        preg_match_all('/<input type="hidden" name="([^"]+)" value="([^"]*)">/', $html, $inputs, PREG_SET_ORDER);
+        $fields = [];
+        foreach ($inputs as [, $name, $value]) {
+            $fields[$name] = html_entity_decode($value, ENT_QUOTES);
+        }
+        return $http->post(html_entity_decode($form[1], ENT_QUOTES), ['form_params' => $fields]);
+    }
+    return $http->get($idp->getHeaderLine('Location'));
+}
+
 /** Kompletter Login über den Test-Anbieter; liefert das Ergebnis aus der Rückleitung zur App. */
 function login(Client $http, CookieJar $jar, string $provider = 'google'): string
 {
+    global $lastReturn;
     $start = $http->get('/api/auth.php?action=login&provider=' . $provider);
     $idpUrl = $start->getHeaderLine('Location');
     $idp = (new Client(['http_errors' => false, 'allow_redirects' => false]))->get($idpUrl);
-    $callback = $idp->getHeaderLine('Location');
-    $back = $http->get($callback);
-    preg_match('/login=([a-z]+)/', $back->getHeaderLine('Location'), $m);
+    $lastReturn = return_from_idp($http, $idp)->getHeaderLine('Location');
+    preg_match('/login=([a-z]+)/', $lastReturn, $m);
     return $m[1] ?? 'keine-weiterleitung';
 }
 
+$lastReturn = '';
 @unlink("{$idpDir}/next-sub.txt");
 @unlink("{$idpDir}/next-error.txt");
+@unlink("{$idpDir}/next-noname.txt");
 
 echo "Anmeldung\n";
 $jar = new CookieJar();
@@ -64,7 +81,7 @@ parse_str((string) parse_url($location, PHP_URL_QUERY), $params);
 check($start->getStatusCode() === 302 && str_starts_with($location, 'http://127.0.0.1:8091/authorize'), 'Login leitet zum Anbieter weiter', $location);
 check(($params['redirect_uri'] ?? '') === APP . '/api/callback.php', 'Redirect-URI ist /api/callback.php', $params['redirect_uri'] ?? null);
 check(($params['code_challenge_method'] ?? '') === 'S256' && strlen($params['nonce'] ?? '') === 32, 'PKCE und Nonce werden gesendet');
-check(($params['scope'] ?? '') === 'openid', 'Nur der Scope „openid“ wird angefragt', $params['scope'] ?? null);
+check(($params['scope'] ?? '') === 'openid profile', 'Scopes „openid profile“ (Kennung und Name, keine E-Mail)', $params['scope'] ?? null);
 
 $idp = (new Client(['http_errors' => false, 'allow_redirects' => false]))->get($location);
 $callbackUrl = $idp->getHeaderLine('Location');
@@ -72,6 +89,9 @@ $callbackUrl = $idp->getHeaderLine('Location');
 $foreign = client(new CookieJar())->get($callbackUrl);
 check(str_contains($foreign->getHeaderLine('Location'), 'login=ungueltig'), 'Rückkehr ohne Bindungs-Cookie wird abgelehnt', $foreign->getHeaderLine('Location'));
 check(login($http, $jar) === 'ok', 'Kompletter Login klappt');
+check(str_ends_with($lastReturn, '/#/settings?login=ok&vorname=Paula'), 'Google: Vorname „Paula“ geht nur im #-Teil an die App', $lastReturn);
+file_put_contents("{$idpDir}/next-noname.txt", '1');
+check(login($http, $jar) === 'ok' && !str_contains($lastReturn, 'vorname='), 'Ohne Namen vom Anbieter kein Vorname in der Rückleitung', $lastReturn);
 $status = body($http->get('/api/auth.php?action=status'));
 check(($status['user']['provider'] ?? '') === 'google', 'Status zeigt angemeldetes Google-Konto', $status);
 $userId = $status['user']['id'] ?? '';
@@ -90,13 +110,25 @@ foreach (['microsoft', 'apple'] as $provider) {
     $start = $httpP->get('/api/auth.php?action=login&provider=' . $provider);
     parse_str((string) parse_url($start->getHeaderLine('Location'), PHP_URL_QUERY), $p);
     if ($provider === 'apple') {
-        check(!isset($p['scope']) && !isset($p['code_challenge']), 'Apple: ohne Scope und ohne PKCE (Rückkehr per GET)', $p);
+        check(($p['scope'] ?? '') === 'name' && ($p['response_mode'] ?? '') === 'form_post' && !isset($p['code_challenge']),
+            'Apple: Scope „name“, Rückkehr per POST (form_post), ohne PKCE', $p);
+        // Ein fremder Browser ohne Bindungs-Cookie darf auch Apples POST-Rückkehr nicht abschließen.
+        $idp = (new Client(['http_errors' => false, 'allow_redirects' => false]))->get($start->getHeaderLine('Location'));
+        $foreignPost = return_from_idp(client(new CookieJar()), $idp)->getHeaderLine('Location');
+        check(str_contains($foreignPost, 'login=ungueltig'), 'Apple: POST-Rückkehr ohne Bindungs-Cookie wird abgelehnt', $foreignPost);
     }
     check(login($httpP, $jarP, $provider) === 'ok', "Login über {$provider} klappt" . ($provider === 'apple' ? ' (signiertes ES256-Client-Secret)' : ''));
+    $expected = $provider === 'apple' ? 'Ida' : 'Mats';
+    check(str_ends_with($lastReturn, "&vorname={$expected}"), $provider === 'apple'
+        ? 'Apple: Vorname aus dem Formularfeld „user“ übernommen'
+        : 'Microsoft: Vorname aus dem Anzeigenamen „Becker, Mats“', $lastReturn);
     $st = body($httpP->get('/api/auth.php?action=status'));
     check(($st['user']['provider'] ?? '') === $provider && $st['user']['id'] !== $userId, "{$provider}-Konto ist ein eigenes Konto", $st);
 }
 check(client(new CookieJar())->get('/api/auth.php?action=login&provider=facebook')->getHeaderLine('Location') === APP . '/#/settings?login=deaktiviert', 'Unbekannter Anbieter wird abgewiesen');
+$dbFiles = glob(sys_get_temp_dir() . '/sb-test-data/schulbuddy.sqlite*') ?: [];
+$dbBytes = implode('', array_map(static fn (string $f): string => (string) file_get_contents($f), $dbFiles));
+check($dbBytes !== '' && !preg_match('/Paula|Beispiel|Mats|Becker|Ida|Muster/', $dbBytes), 'Namen vom Anbieter landen nicht in der Datenbank', array_map('basename', $dbFiles));
 
 echo "Synchronisierung\n";
 $sync = body($http->get('/api/sync.php'));

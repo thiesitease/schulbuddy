@@ -86,18 +86,27 @@ beim Deploy mit hochgeladen).
 Für alle Anbieter gilt dieselbe Redirect-/Return-URL: **`https://schoolbuddy.hamburgrissen.de/api/callback.php`**.
 Ein Anbieter erscheint in der App, sobald seine Daten in der Konfiguration stehen.
 
+Angefragt werden die Kennung und der Name (Scopes `openid profile`, bei Apple `name`), damit die App den Vornamen
+bei der Einrichtung vorschlagen kann. Gespeichert wird auf dem Server nur die gehashte Kennung; der Vorname geht
+einmalig im Rücksprung an die App (hinter dem `#`, also in keinem Server-Log). Eine E-Mail-Adresse wird nicht abgefragt.
+
 - **Microsoft** (kostenlos): portal.azure.com → Microsoft Entra ID → App-Registrierungen → Neue Registrierung.
   Kontotyp „Konten in einem beliebigen Organisationsverzeichnis und persönliche Microsoft-Konten“, Plattform „Web“
-  mit der Redirect-URL. Unter „Zertifikate & Geheimnisse“ ein Client-Secret anlegen (läuft ab – rechtzeitig erneuern).
-  `client_id` = Anwendungs-ID. Hinweis: Manche Schul-Organisationen erlauben Schülern keine Zustimmung zu fremden
-  Apps; persönliche Microsoft-Konten funktionieren immer.
+  mit der Redirect-URL. Unter „Zertifikate & Geheimnisse“ ein Client-Secret anlegen und den **Wert** eintragen,
+  nicht die „Geheime ID“ (läuft ab – rechtzeitig erneuern). `client_id` = Anwendungs-ID. Für einen sauberen Vornamen
+  unter „Tokenkonfiguration“ den optionalen Anspruch `given_name` (Tokentyp ID) hinzufügen; ohne ihn nimmt die App
+  das erste Wort des Anzeigenamens. Hinweis: Manche Schul-Organisationen erlauben Schülern keine Zustimmung zu
+  fremden Apps; persönliche Microsoft-Konten funktionieren immer.
 - **Google** (kostenlos): console.cloud.google.com → APIs & Dienste → OAuth-Zustimmungsbildschirm (Extern,
-  App-Name, Support-E-Mail, autorisierte Domain `hamburgrissen.de`, nur Scope `openid`), dann Anmeldedaten →
-  OAuth-Client-ID → Webanwendung mit der Redirect-URL.
+  App-Name, Support-E-Mail, autorisierte Domain `hamburgrissen.de`, Scopes `openid` und `…/auth/userinfo.profile`),
+  dann Anmeldedaten → OAuth-Client-ID → Webanwendung mit der Redirect-URL. In der Konfiguration endet
+  `client_id` auf `.apps.googleusercontent.com`, `client_secret` beginnt mit `GOCSPX-`.
 - **Apple** (Apple Developer Program, 99 €/Jahr): Identifiers → App ID mit „Sign in with Apple“ → Services ID
   (= `client_id`) mit Domain `schoolbuddy.hamburgrissen.de` und der Return-URL → Keys → neuer Schlüssel mit
   „Sign in with Apple“ (.p8 herunterladen, Key ID notieren). Dazu die Team ID. In der Konfiguration bei
   `private_key` den Pfad zur .p8-Datei (außerhalb des Webverzeichnisses) oder ihren Inhalt eintragen.
+  Apple kommt per POST zurück (`form_post`) und schickt den Namen nur bei der allerersten Anmeldung mit; das
+  Bindungs-Cookie ist dafür `SameSite=None`.
 
 ### 4. PHP-Abhängigkeiten
 

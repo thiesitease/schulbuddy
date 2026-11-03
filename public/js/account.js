@@ -228,6 +228,15 @@ export function login(provider) {
   location.href = `api/auth.php?action=login&provider=${encodeURIComponent(provider)}`;
 }
 
+// Vorname, den der Anbieter beim Login mitgeschickt hat: nur im Speicher, bis die Seite neu lädt.
+let givenName = '';
+
+export const providerName = () => givenName;
+
+export function rememberProviderName(name) {
+  givenName = String(name ?? '').trim().slice(0, 30);
+}
+
 /** Abmelden: Änderungen noch hochladen, dann Daten von diesem Gerät entfernen (sie bleiben im Konto). */
 export async function logout() {
   await pushNow();
@@ -237,6 +246,7 @@ export async function logout() {
   if (!(await confirmDialog(message, { confirmText: 'Abmelden' }))) return false;
   await api('api/auth.php?action=logout', { method: 'POST' }).catch(() => null);
   info = { ...info, user: null };
+  givenName = '';
   resetAll();
   emit('info');
   emit('data');

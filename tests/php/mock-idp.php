@@ -40,12 +40,28 @@ if ($path === '/authorize') {
         exit;
     }
     $code = bin2hex(random_bytes(8));
+    $scope = (string) ($_GET['scope'] ?? '');
     file_put_contents("{$dir}/code-{$code}.json", json_encode([
         'nonce' => $_GET['nonce'] ?? '',
         'client_id' => $_GET['client_id'],
         'challenge' => $_GET['code_challenge'] ?? '',
         'redirect' => $redirect,
+        'scope' => $scope,
     ]));
+    if (($_GET['response_mode'] ?? '') === 'form_post') {
+        // Wie Apple: Rückkehr als POST-Formular, der Name steckt im JSON-Feld „user“ statt im ID-Token.
+        $fields = ['code' => $code, 'state' => (string) $_GET['state']];
+        if (in_array('name', explode(' ', $scope), true)) {
+            $fields['user'] = json_encode(['name' => ['firstName' => 'Ida', 'lastName' => 'Muster']]);
+        }
+        header('Content-Type: text/html; charset=utf-8');
+        echo '<form method="post" action="' . htmlspecialchars($redirect) . '">';
+        foreach ($fields as $name => $value) {
+            echo '<input type="hidden" name="' . $name . '" value="' . htmlspecialchars($value) . '">';
+        }
+        echo '</form><script>document.forms[0].submit()</script>';
+        exit;
+    }
     header('Location: ' . $redirect . '?' . http_build_query(['code' => $code, 'state' => $_GET['state']]));
     exit;
 }
@@ -75,6 +91,14 @@ if ($path === '/token') {
         json_out(401, ['error' => 'invalid_client']);
     }
     $sub = is_file("{$dir}/next-sub.txt") ? trim((string) file_get_contents("{$dir}/next-sub.txt")) : 'user-123';
+    // Mit Scope „profile“: Google liefert given_name, Microsoft ohne optionalen Claim nur den Anzeigenamen.
+    $names = [];
+    if (in_array('profile', explode(' ', (string) ($tx['scope'] ?? '')), true) && !is_file("{$dir}/next-noname.txt")) {
+        $names = $tx['client_id'] === 'ms-client'
+            ? ['name' => 'Becker, Mats', 'preferred_username' => 'mats.becker@schule.example']
+            : ['name' => 'Paula Beispiel', 'given_name' => 'Paula', 'family_name' => 'Beispiel'];
+    }
+    @unlink("{$dir}/next-noname.txt");
     $now = time();
     $idToken = JWT::encode([
         'iss' => 'https://mock-idp.test',
@@ -83,7 +107,7 @@ if ($path === '/token') {
         'nonce' => $tx['nonce'],
         'iat' => $now,
         'exp' => $now + 600,
-    ], $pem, 'RS256', 'test-key-1');
+    ] + $names, $pem, 'RS256', 'test-key-1');
     json_out(200, ['access_token' => 'unused', 'token_type' => 'Bearer', 'expires_in' => 600, 'id_token' => $idToken]);
 }
 

@@ -23,7 +23,8 @@ final class LoginError extends RuntimeException
 
 /**
  * Anmeldung über Microsoft, Google und Apple (OpenID Connect, Authorization Code Flow).
- * Gespeichert wird nur eine gehashte Kennung des Kontos beim Anbieter – kein Name, keine E-Mail.
+ * Gespeichert wird nur eine gehashte Kennung des Kontos beim Anbieter. Den Vornamen gibt finish()
+ * nur zurück, damit die App ihn vorschlagen kann – auf dem Server bleibt er nicht, eine E-Mail fragen wir nicht ab.
  */
 final class Oidc
 {
@@ -34,7 +35,7 @@ final class Oidc
             'token' => 'https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token',
             'jwks' => 'https://login.microsoftonline.com/{tenant}/discovery/v2.0/keys',
             'issuer' => '#^https://login\.microsoftonline\.com/[0-9a-f-]{36}/v2\.0$#',
-            'scope' => 'openid',
+            'scope' => 'openid profile',
             'pkce' => true,
         ],
         'google' => [
@@ -43,17 +44,17 @@ final class Oidc
             'token' => 'https://oauth2.googleapis.com/token',
             'jwks' => 'https://www.googleapis.com/oauth2/v3/certs',
             'issuer' => '#^(https://)?accounts\.google\.com$#',
-            'scope' => 'openid',
+            'scope' => 'openid profile',
             'pkce' => true,
         ],
-        // Ohne angefragte Daten (scope) kommt Apple per GET zurück; die ID genügt uns.
+        // Mit Scope verlangt Apple die Rückkehr per POST (form_post) und schickt den Namen nur bei der ersten Anmeldung mit.
         'apple' => [
             'label' => 'Apple',
             'authorize' => 'https://appleid.apple.com/auth/authorize',
             'token' => 'https://appleid.apple.com/auth/token',
             'jwks' => 'https://appleid.apple.com/auth/keys',
             'issuer' => '#^https://appleid\.apple\.com$#',
-            'scope' => '',
+            'scope' => 'name',
             'pkce' => false,
         ],
     ];
@@ -101,7 +102,8 @@ final class Oidc
         $binding = bin2hex(random_bytes(24));
         $this->db->prepare('INSERT INTO sb_oauth (state, provider, nonce, verifier, binding_hash, created_at) VALUES (?, ?, ?, ?, ?, ?)')
             ->execute([$state, $provider, $nonce, $verifier, hash('sha256', $binding), time()]);
-        set_cookie(self::BINDING_COOKIE, $binding, time() + self::MAX_AGE);
+        // Apples Rückkehr ist ein POST von appleid.apple.com – ein Lax-Cookie würde dabei nicht mitgeschickt.
+        set_cookie(self::BINDING_COOKIE, $binding, time() + self::MAX_AGE, sameSite: $provider === 'apple' ? 'None' : 'Lax');
 
         $params = [
             'client_id' => $this->clientId($provider),
@@ -117,7 +119,9 @@ final class Oidc
             $params['code_challenge'] = self::base64url(hash('sha256', $verifier, true));
             $params['code_challenge_method'] = 'S256';
         }
-        if ($provider !== 'apple') {
+        if ($provider === 'apple') {
+            $params['response_mode'] = 'form_post';
+        } else {
             $params['prompt'] = 'select_account';
         }
         return $this->endpoint($provider, 'authorize') . '?' . http_build_query($params, '', '&', PHP_QUERY_RFC3986);
@@ -125,8 +129,8 @@ final class Oidc
 
     /**
      * Prüft die Rückkehr vom Anbieter, tauscht den Code gegen ein ID-Token und prüft dieses.
-     * @param array<string, mixed> $query
-     * @return array{0: string, 1: string} Anbieter und eindeutige Konto-Kennung
+     * @param array<string, mixed> $query GET-Parameter, bei Apple die POST-Felder
+     * @return array{0: string, 1: string, 2: string} Anbieter, eindeutige Konto-Kennung und Vorname (oder '')
      */
     public function finish(array $query): array
     {
@@ -179,7 +183,25 @@ final class Oidc
         $claims = $this->verify($provider, $body['id_token'], (string) $tx['nonce']);
         // Microsoft: Kennung pro Organisation (tid) eindeutig machen.
         $subject = $provider === 'microsoft' ? ($claims->tid ?? '') . ':' . $claims->sub : (string) $claims->sub;
-        return [$provider, $subject];
+        return [$provider, $subject, self::givenName($provider, $claims, $query)];
+    }
+
+    /** Nur der Vorname; Nachname, Profilbild und Anmeldename im ID-Token werden nicht verwendet. */
+    private static function givenName(string $provider, stdClass $claims, array $query): string
+    {
+        if ($provider === 'apple') {
+            // Apple schickt den Namen nicht im ID-Token, sondern als JSON-Feld „user“ – und nur beim ersten Mal.
+            $user = json_decode((string) ($query['user'] ?? ''), true);
+            $name = is_array($user['name'] ?? null) ? (string) ($user['name']['firstName'] ?? '') : '';
+        } elseif (is_string($claims->given_name ?? null) && trim($claims->given_name) !== '') {
+            $name = $claims->given_name;
+        } else {
+            // Microsoft liefert ohne optionalen Claim nur den Anzeigenamen: „Max Muster“ oder „Muster, Max“.
+            $full = is_string($claims->name ?? null) ? $claims->name : '';
+            $name = str_contains($full, ',') ? explode(',', $full, 2)[1] : $full;
+            $name = (string) strtok(trim($name), ' ');
+        }
+        return cut((string) preg_replace('/\p{C}+/u', '', $name), 30);
     }
 
     private function verify(string $provider, string $idToken, string $nonce): stdClass

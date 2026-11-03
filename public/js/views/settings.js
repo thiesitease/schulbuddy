@@ -42,7 +42,7 @@ function accountCard() {
     <h2 id="set-account">${icon('cloud')} Konto <span class="badge">optional</span></h2>
     <p class="small">Melde dich an, um deine Lerndaten auf Handy, Tablet und Computer zu nutzen. Ohne Konto bleibt alles nur auf diesem Gerät.</p>
     ${providerButtons(info.providers)}
-    <p class="muted small">SchoolBuddy bekommt dabei weder deinen Namen noch deine E-Mail-Adresse, nur eine anonyme Kennung. <a href="datenschutz.html">Mehr dazu</a></p>
+    <p class="muted small">SchoolBuddy übernimmt dabei nur deinen Vornamen als Vorschlag für dein Profil und speichert ihn nicht auf dem Server. Deine E-Mail-Adresse fragen wir nicht ab. <a href="datenschutz.html">Mehr dazu</a></p>
   </section>`;
 }
 

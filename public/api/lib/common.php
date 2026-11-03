@@ -156,13 +156,14 @@ function read_json_body(int $maxBytes, bool $assoc = true): array|stdClass
     return $data;
 }
 
-function set_cookie(string $name, string $value, int $expires, string $path = '/api/'): void
+/** SameSite=None geht nur zusammen mit Secure; ohne HTTPS (lokale Tests) bleibt es bei Lax. */
+function set_cookie(string $name, string $value, int $expires, string $path = '/api/', string $sameSite = 'Lax'): void
 {
     setcookie($name, $value, [
         'expires' => $expires,
         'path' => $path,
         'secure' => is_https(),
         'httponly' => true,
-        'samesite' => 'Lax',
+        'samesite' => $sameSite === 'None' && !is_https() ? 'Lax' : $sameSite,
     ]);
 }

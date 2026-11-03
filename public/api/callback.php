@@ -5,6 +5,7 @@ declare(strict_types=1);
 /*
  * SchulBuddy – Rückkehr vom Login bei Microsoft, Google oder Apple.
  * Diese Adresse (https://…/api/callback.php) wird bei allen drei Anbietern als Redirect-URI eingetragen.
+ * Microsoft und Google kommen per GET zurück, Apple per POST (form_post).
  */
 
 use SchulBuddy\Db;
@@ -20,16 +21,22 @@ require __DIR__ . '/vendor/autoload.php';
 
 $config = sb_config();
 
-function back_to_app(array $config, string $result): never
+/**
+ * Zurück zur App. Den Vornamen bekommt die App im Teil hinter „#“: Der geht nicht an den Server,
+ * landet also in keinem Log, und die App entfernt ihn sofort aus der Adresse.
+ */
+function back_to_app(array $config, string $result, string $givenName = ''): never
 {
     header('Cache-Control: no-store');
-    header('Location: ' . app_url($config) . '/#/settings?login=' . rawurlencode($result), true, 302);
+    $name = $givenName !== '' ? '&vorname=' . rawurlencode($givenName) : '';
+    header('Location: ' . app_url($config) . '/#/settings?login=' . rawurlencode($result) . $name, true, 302);
     exit;
 }
 
 try {
     $db = Db::connect($config);
-    [$provider, $subject] = (new Oidc($config, $db))->finish($_GET);
+    $params = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' ? $_POST : $_GET;
+    [$provider, $subject, $givenName] = (new Oidc($config, $db))->finish($params);
 
     $hash = hash_hmac('sha256', $provider . ':' . $subject, sb_secret($config));
     $stmt = $db->prepare('SELECT id FROM sb_users WHERE subject_hash = ?');
@@ -43,7 +50,7 @@ try {
             ->execute([$userId, $provider, $hash, time(), time()]);
     }
     Session::start($db, (string) $userId, (int) $config['session_days']);
-    back_to_app($config, 'ok');
+    back_to_app($config, 'ok', $givenName);
 } catch (LoginError $e) {
     error_log('SchulBuddy: Login fehlgeschlagen – ' . $e->getMessage());
     back_to_app($config, $e->reason);

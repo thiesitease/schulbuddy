@@ -3,7 +3,7 @@ import { getState, update, SUBJECTS } from '../store.js';
 import { html, LOGO, icon, toast } from '../ui.js';
 import { WEEKDAYS } from '../dates.js';
 import { providerButtons, PROVIDER_NAMES } from '../components.js';
-import { accountInfo, login, logout } from '../account.js';
+import { accountInfo, login, logout, providerName } from '../account.js';
 
 const PRESETS = {
   wenig: { label: 'Locker', text: 'ca. 20 Min. am Tag', minutes: [20, 20, 20, 20, 20, 0, 20] },
@@ -18,7 +18,7 @@ export default {
   render(root, ctx) {
     const s = getState();
     draft ||= {
-      name: s.profile.name,
+      name: s.profile.name || providerName(),
       grade: s.profile.grade,
       subjects: [...s.profile.subjects],
       preset: 'normal',
@@ -112,8 +112,9 @@ function welcome() {
 function loginBox() {
   const { user, providers } = accountInfo();
   if (user) {
+    const name = providerName();
     return html`<div class="login-box">
-      <p class="small"><strong>Angemeldet mit ${PROVIDER_NAMES[user.provider] || user.provider}.</strong> In deinem Konto sind noch keine Daten.
+      <p class="small"><strong>${name ? `Hallo ${name}! ` : ''}Angemeldet mit ${PROVIDER_NAMES[user.provider] || user.provider}.</strong> In deinem Konto sind noch keine Daten.
         Richte SchoolBuddy jetzt ein, danach wird alles automatisch gespeichert.</p>
       <button type="button" class="btn ghost sm" data-action="logout">Abmelden</button>
     </div>`;
