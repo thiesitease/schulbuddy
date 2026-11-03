@@ -40,10 +40,11 @@ function sb_config(): array
         // Nur für lokale Tests: anderer Anthropic-Endpunkt.
         'base_url' => null,
     ];
-    // Gesucht wird: Umgebungsvariable, eine bzw. zwei Ebenen über dem Webverzeichnis
-    // (bei manitu: /home/sites/<site>/web bzw. /home/sites/<site>), zuletzt api/config.php.
+    // Gesucht wird: Umgebungsvariable, dann außerhalb des Webverzeichnisses
+    // (bei manitu: /home/sites/<site>/data-private, /home/sites/<site>/web, /home/sites/<site>), zuletzt api/config.php.
     $files = [
         getenv('SCHULBUDDY_CONFIG') ?: '',
+        dirname($api, 3) . '/data-private/schulbuddy-config.php',
         dirname($api, 2) . '/schulbuddy-config.php',
         dirname($api, 3) . '/schulbuddy-config.php',
         $api . '/config.php',

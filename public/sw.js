@@ -65,6 +65,24 @@ self.addEventListener('message', (event) => {
   if (event.data === 'skipWaiting') self.skipWaiting();
 });
 
+function fetchWithTimeout(request, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('timeout')), ms);
+    // Ohne zweites Argument: Navigationsanfragen dürfen nicht neu konstruiert werden.
+    // Frisch sind sie trotzdem, weil der Server für HTML „Cache-Control: no-cache“ sendet.
+    fetch(request).then(
+      (response) => {
+        clearTimeout(timer);
+        resolve(response);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
@@ -72,15 +90,14 @@ self.addEventListener('fetch', (event) => {
   // KI-Anfragen gehen immer ins Netz.
   if (url.pathname.includes('/api/')) return;
 
+  // Seiten (App, Impressum, Datenschutz) immer frisch aus dem Netz, offline aus dem Speicher.
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
-        const cached = VERSION === 'sb-dev' ? null : await caches.match(request, { ignoreSearch: true });
-        if (cached) return cached;
         try {
-          return await fetch(request);
+          return await fetchWithTimeout(request, 4000);
         } catch {
-          return (await caches.match('index.html')) || Response.error();
+          return (await caches.match(request, { ignoreSearch: true })) || (await caches.match('index.html')) || Response.error();
         }
       })(),
     );

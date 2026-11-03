@@ -50,17 +50,23 @@ export function initPWA() {
   window.addEventListener('load', async () => {
     try {
       const reg = await navigator.serviceWorker.register('sw.js');
-      const offerUpdate = (worker) =>
+      let offered = false;
+      // Beim Tippen die gerade wartende Version ansprechen: Bei mehreren Updates hintereinander
+      // ist eine früher gemerkte Version womöglich schon überholt.
+      const offerUpdate = () => {
+        if (offered) return;
+        offered = true;
         toast('Eine neue Version von SchulBuddy ist da.', {
           action: 'Aktualisieren',
           timeout: 0,
-          onAction: () => worker.postMessage('skipWaiting'),
+          onAction: () => (reg.waiting ? reg.waiting.postMessage('skipWaiting') : location.reload()),
         });
-      if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
+      };
+      if (reg.waiting && navigator.serviceWorker.controller) offerUpdate();
       reg.addEventListener('updatefound', () => {
         const worker = reg.installing;
         worker?.addEventListener('statechange', () => {
-          if (worker.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(worker);
+          if (worker.state === 'installed' && navigator.serviceWorker.controller) offerUpdate();
         });
       });
       document.addEventListener('visibilitychange', () => {
