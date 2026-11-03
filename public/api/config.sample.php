@@ -17,6 +17,11 @@ return [
     'anthropic_api_key' => '',
     'model' => 'claude-opus-5-5',
     'effort' => ['chat' => 'low', 'quiz' => 'low', 'cards' => 'low', 'scan' => 'medium'],
+    // Höchstbetrag für die KI pro Kalenderwoche (Montag bis Sonntag). Anthropic rechnet in US-Dollar ab;
+    // Kurs und Umsatzsteuer sind vorsichtig angesetzt (1 $ = 1 €, 19 %), 7 € entsprechen also 5,88 $.
+    // Ist das Budget aufgebraucht, macht Buddy bis Montag Pause. Die Preise pro Modell stehen in
+    // api/lib/common.php ('prices') und lassen sich hier überschreiben, falls Anthropic sie ändert.
+    'ai_budget' => ['eur_per_week' => 7.0, 'eur_per_usd' => 1.0, 'vat' => 0.19],
     // KI-Anfragen pro Tag: je Gerät, je IP-Adresse (Schul-WLAN!) und insgesamt.
     'limit_per_device' => 25,
     'limit_per_ip' => 150,

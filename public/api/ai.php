@@ -11,6 +11,7 @@ declare(strict_types=1);
  * Der Anthropic-API-Schlüssel steht nur in der Konfiguration auf dem Server (siehe config.sample.php).
  * Anfragen und Fotos werden nicht gespeichert, nur gehashte Zähler für das Tageslimit.
  * Die Sprache der Antworten und Meldungen kommt aus dem Header X-SchulBuddy-Lang (siehe app_lang()).
+ * Die Kosten sind pro Woche gedeckelt ('ai_budget', siehe lib/Budget.php).
  */
 
 use Anthropic\Client;
@@ -22,10 +23,14 @@ use Anthropic\Core\Exceptions\BadRequestException;
 use Anthropic\Core\Exceptions\PermissionDeniedException;
 use Anthropic\Core\Exceptions\RateLimitException;
 use Anthropic\RequestOptions;
+use SchulBuddy\Budget;
+use SchulBuddy\Pricing;
 use SchulBuddy\Prompts;
 use SchulBuddy\RateLimiter;
 
 require __DIR__ . '/lib/common.php';
+require __DIR__ . '/lib/Budget.php';
+require __DIR__ . '/lib/Pricing.php';
 require __DIR__ . '/lib/Prompts.php';
 require __DIR__ . '/lib/RateLimiter.php';
 
@@ -40,6 +45,14 @@ $lang = app_lang();
 $salt = sb_secret($config);
 $hashId = static fn (string $value): string => substr(hash_hmac('sha256', $value, $salt), 0, 20);
 $limiter = new RateLimiter(data_dir($config));
+$pricing = new Pricing((array) $config['prices']);
+$budget = Budget::fromConfig($config, data_dir($config));
+$model = (string) $config['model'];
+$maxTokens = (int) $config['max_tokens'];
+// Server-seitiger Fallback, falls ein Sicherheitsfilter eine harmlose Anfrage ablehnt.
+$fallbacks = $config['fallbacks'] && preg_match('/^claude-(opus-5|sonnet-5-5|fable)/', $model) === 1;
+$pausedMessage = tr('Buddy macht diese Woche Pause: Das KI-Budget ist aufgebraucht. Ab Montag geht es weiter.',
+    'Buddy is taking a break this week: the AI budget has been used up. It will be back on Monday.');
 
 $deviceHeader = (string) ($_SERVER['HTTP_X_SCHULBUDDY_DEVICE'] ?? '');
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -49,7 +62,8 @@ if ($method === 'GET') {
     if (preg_match('/^[A-Za-z0-9-]{8,64}$/', $deviceHeader)) {
         $remaining = max(0, (int) $config['limit_per_device'] - $limiter->used('d:' . $hashId($deviceHeader)));
     }
-    respond(200, ['ok' => true, 'enabled' => $enabled, 'limit' => (int) $config['limit_per_device'], 'remaining' => $remaining]);
+    $paused = $enabled && $budget->exhausted($pricing->worstCase($model, Pricing::MIN_INPUT_TOKENS, $maxTokens, $fallbacks));
+    respond(200, ['ok' => true, 'enabled' => $enabled, 'paused' => $paused, 'limit' => (int) $config['limit_per_device'], 'remaining' => $remaining]);
 }
 
 if ($method !== 'POST') {
@@ -177,48 +191,66 @@ switch ($task) {
         break;
 }
 
+$system = Prompts::system($grade, $lang);
+
+// Wochenbudget: vorab reservieren, was die Anfrage höchstens kosten kann.
+$worstCase = $pricing->worstCase($model, Pricing::estimateInputTokens($system, $messages, $outputConfig), $maxTokens, $fallbacks);
+$reservation = $budget->reserve($worstCase);
+if ($reservation === null) {
+    fail(503, $pausedMessage, ['paused' => true]);
+}
+
 require $autoload;
 
-$model = (string) $config['model'];
 $params = [
     'model' => $model,
-    'maxTokens' => (int) $config['max_tokens'],
-    'system' => [['type' => 'text', 'text' => Prompts::system($grade, $lang)]],
+    'maxTokens' => $maxTokens,
+    'system' => [['type' => 'text', 'text' => $system]],
     'messages' => $messages,
     'outputConfig' => $outputConfig,
 ];
-// Server-seitiger Fallback, falls ein Sicherheitsfilter eine harmlose Anfrage ablehnt.
-if ($config['fallbacks'] && preg_match('/^claude-(opus-5|sonnet-5-5|fable)/', $model)) {
-    $params['requestOptions'] = RequestOptions::with(
-        extraHeaders: ['anthropic-beta' => 'server-side-fallback-2026-07-01'],
-        extraBodyParams: ['fallbacks' => 'default'],
-    );
+if ($fallbacks) {
+    $params['betas'] = ['server-side-fallback-2026-07-01'];
+    $params['fallbacks'] = 'default';
 }
 
 try {
+    // Keine automatischen Wiederholungen: Ein abgebrochener Versuch könnte schon berechnet sein,
+    // und das Budget soll nur zählen, was wirklich gelaufen ist.
     $client = new Client(
         apiKey: (string) $config['anthropic_api_key'],
         baseUrl: $config['base_url'] ?: null,
-        requestOptions: RequestOptions::with(timeout: 110, maxRetries: 1),
+        requestOptions: RequestOptions::with(timeout: 110, maxRetries: 0),
     );
-    $message = $client->messages->create(...$params);
+    // Beta-Schnittstelle, weil nur sie usage.iterations liefert: die Abrechnung je Versuch bei Fallbacks.
+    $message = $client->beta->messages->create(...$params);
 } catch (AuthenticationException | PermissionDeniedException $e) {
+    $budget->release($reservation);
     error_log('SchulBuddy: API-Schlüssel ungültig – ' . $e->getMessage());
     fail(503, tr('Die KI ist auf dem Server nicht richtig eingerichtet.', 'The AI is not set up correctly on the server.'));
 } catch (RateLimitException $e) {
+    $budget->release($reservation);
     fail(503, tr('Buddy hat gerade sehr viel zu tun. Versuch es in einer Minute noch einmal.', 'Buddy is very busy right now. Please try again in a minute.'));
 } catch (BadRequestException $e) {
+    $budget->release($reservation);
     error_log('SchulBuddy: Anfrage abgelehnt – ' . $e->getMessage());
     fail(400, tr('Die Anfrage konnte nicht verarbeitet werden. Versuch es mit einem anderen Foto oder Text.', 'The request could not be processed. Try a different photo or text.'));
 } catch (APITimeoutException | APIConnectionException $e) {
+    // Die Anfrage könnte trotzdem gelaufen sein: vorsichtshalber den ungünstigsten Fall verbuchen.
+    $budget->settle($reservation, $worstCase);
     fail(504, tr('Keine Verbindung zur KI. Versuch es gleich noch einmal.', 'No connection to the AI. Please try again in a moment.'));
 } catch (APIStatusException $e) {
+    $budget->release($reservation);
     error_log('SchulBuddy: API-Fehler – ' . $e->getMessage());
     fail(502, tr('Die KI ist gerade nicht erreichbar. Versuch es später noch einmal.', 'The AI is not available right now. Please try again later.'));
 } catch (Throwable $e) {
+    $budget->settle($reservation, $worstCase);
     error_log('SchulBuddy: ' . $e::class . ' – ' . $e->getMessage());
     fail(500, tr('Da ist etwas schiefgelaufen. Versuch es später noch einmal.', 'Something went wrong. Please try again later.'));
 }
+
+// Auch abgelehnte oder unbrauchbare Antworten kosten etwas: sofort abrechnen.
+$budget->settle($reservation, $pricing->cost($message, $model) ?? $worstCase);
 
 $stopReason = $message->stopReason instanceof BackedEnum ? $message->stopReason->value : (string) $message->stopReason;
 if ($stopReason === 'refusal') {

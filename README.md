@@ -148,6 +148,15 @@ Tageslimits: 25 Anfragen pro Gerät, 150 pro IP (Schul-WLAN), 1.500 insgesamt �
 Die Token-Summen des Tages stehen in `usage-JJJJ-MM-TT.json` im `data_dir`. Für deutlich geringere Kosten kann ein
 günstigeres Modell gesetzt werden, z. B. `claude-haiku-5-5`.
 
+**Wochenbudget:** Die KI darf höchstens `ai_budget.eur_per_week` kosten (Standard 7 €), gezählt pro Kalenderwoche
+(Montag bis Sonntag). Weil Anthropic in US-Dollar abrechnet, rechnet die App vorsichtig mit 1 $ = 1 € plus 19 %
+Umsatzsteuer, also mit 5,88 $. Vor jeder Anfrage reserviert `api/lib/Budget.php` den ungünstigsten Preis
+(volle `max_tokens`, dazu ein möglicher Fallback-Versuch zum höchsten Preis), danach wird genau nach `usage`
+abgerechnet, bei Fallbacks pro Versuch zum Preis des jeweiligen Modells (`api/lib/Pricing.php`, Preise unter
+`prices` in `api/lib/common.php`). Reicht der Rest nicht mehr für den ungünstigsten Fall, macht Buddy bis Montag
+Pause. Der Stand der Woche steht in `ai-budget-JJJJ-WKW.json` im `data_dir`. Zusätzlich sollte in der
+Anthropic-Konsole ein monatliches Ausgabenlimit gesetzt sein, als zweite Absicherung.
+
 ## Vor dem Start erledigen
 
 - Platzhalter in `impressum.html` und `datenschutz.html` ausfüllen (in [eckigen Klammern]) und die

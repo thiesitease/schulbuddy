@@ -29,6 +29,26 @@ if (($headers['authorization'] ?? '') !== 'Bearer test-key' && ($headers['x-api-
 }
 
 $req = json_decode($raw, true);
+$last = end($req['messages']);
+$content = is_array($last) ? ($last['content'] ?? '') : '';
+$lastText = is_string($content) ? $content : implode(' ', array_map(static fn ($b) => (string) ($b['text'] ?? ''), (array) $content));
+if (str_contains($lastText, 'ERROR-TEST')) {
+    http_response_code(500);
+    echo json_encode(['type' => 'error', 'error' => ['type' => 'api_error', 'message' => 'Testfehler']]);
+    exit;
+}
+$model = $req['model'] ?? 'claude-opus-5-5';
+$usage = ['input_tokens' => 120, 'output_tokens' => 80];
+if (str_contains($lastText, 'FALLBACK-TEST')) {
+    // Wie ein Server-Fallback: Opus 5.5 lehnt ab, Opus 5 antwortet. Abgerechnet wird je Versuch.
+    $iteration = static fn (string $type, string $m, int $in, int $out): array => ['type' => $type, 'model' => $m,
+        'input_tokens' => $in, 'output_tokens' => $out, 'cache_creation_input_tokens' => 0, 'cache_read_input_tokens' => 0, 'cache_creation' => null];
+    $model = 'claude-opus-5';
+    $usage = ['input_tokens' => 100, 'output_tokens' => 1000, 'iterations' => [
+        $iteration('message', 'claude-opus-5-5', 100, 0),
+        $iteration('fallback_message', 'claude-opus-5', 100, 1000),
+    ]];
+}
 $schema = $req['output_config']['format']['schema']['properties'] ?? [];
 if (isset($schema['questions'])) {
     $text = json_encode(['questions' => [
@@ -45,9 +65,9 @@ echo json_encode([
     'id' => 'msg_test',
     'type' => 'message',
     'role' => 'assistant',
-    'model' => $req['model'] ?? 'claude-opus-5-5',
+    'model' => $model,
     'content' => [['type' => 'text', 'text' => $text]],
     'stop_reason' => 'end_turn',
     'stop_sequence' => null,
-    'usage' => ['input_tokens' => 120, 'output_tokens' => 80],
+    'usage' => $usage,
 ]);

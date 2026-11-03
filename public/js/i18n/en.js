@@ -223,6 +223,7 @@ export default {
   'Stell mir 3 Übungsaufgaben zu linearen Funktionen.': 'Give me 3 practice problems on linear functions.',
   'Du bist offline. Buddy braucht eine Internetverbindung.': 'You are offline. Buddy needs an internet connection.',
   'Buddy ist gerade nicht erreichbar. Alle anderen Funktionen gehen trotzdem.': 'Buddy is not available right now. All other features still work.',
+  'Buddy macht diese Woche Pause: Das KI-Budget ist aufgebraucht. Ab Montag geht es weiter.': 'Buddy is taking a break this week: the AI budget has been used up. It will be back on Monday.',
   'Heute noch {requests} frei.': '{requests} left today.',
   'KI-Anfrage': 'AI request',
   'KI-Anfragen': 'AI requests',

@@ -21,6 +21,17 @@ function sb_config(): array
         'effort' => ['chat' => 'low', 'quiz' => 'low', 'cards' => 'low', 'scan' => 'medium'],
         'max_tokens' => 16000,
         'fallbacks' => true,
+        // Höchstens so viel dürfen die KI-Anfragen pro Kalenderwoche (Montag bis Sonntag) kosten.
+        // Anthropic rechnet in US-Dollar ab; Kurs und Umsatzsteuer sind vorsichtig angesetzt.
+        'ai_budget' => ['eur_per_week' => 7.0, 'eur_per_usd' => 1.0, 'vat' => 0.19],
+        // US-Dollar pro Million Token (Stand: Oktober 2026). Fallback-Versuche kosten den Preis ihres Modells,
+        // Modelle ohne Eintrag den Satz unter '*'. cache_write ist der Preis für Einträge mit 1 Stunde Laufzeit.
+        'prices' => [
+            'claude-opus-5-5' => ['input' => 4.0, 'output' => 20.0, 'cache_write' => 8.0, 'cache_read' => 0.2],
+            'claude-opus-5' => ['input' => 5.0, 'output' => 25.0, 'cache_write' => 10.0, 'cache_read' => 0.5],
+            'claude-opus-4-8' => ['input' => 5.0, 'output' => 25.0, 'cache_write' => 10.0, 'cache_read' => 0.5],
+            '*' => ['input' => 10.0, 'output' => 50.0, 'cache_write' => 20.0, 'cache_read' => 1.0],
+        ],
         'limit_per_device' => 25,
         'limit_per_ip' => 150,
         'limit_global' => 1500,

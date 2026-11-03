@@ -41,9 +41,10 @@ async function showStatus(root) {
   if (!el) return;
   if (!status.available) {
     el.hidden = false;
-    el.innerHTML = String(html`${icon('info')}<span>${status.offline
-      ? t('Du bist offline. Buddy braucht eine Internetverbindung.')
-      : t('Buddy ist gerade nicht erreichbar. Alle anderen Funktionen gehen trotzdem.')}</span>`);
+    let text = t('Buddy ist gerade nicht erreichbar. Alle anderen Funktionen gehen trotzdem.');
+    if (status.offline) text = t('Du bist offline. Buddy braucht eine Internetverbindung.');
+    else if (status.paused) text = t('Buddy macht diese Woche Pause: Das KI-Budget ist aufgebraucht. Ab Montag geht es weiter.');
+    el.innerHTML = String(html`${icon('info')}<span>${text}</span>`);
   } else if (typeof status.remaining === 'number' && status.remaining <= 5) {
     el.hidden = false;
     el.innerHTML = String(html`${icon('info')}<span>${t('Heute noch {requests} frei.', { requests: plural(status.remaining, 'KI-Anfrage', 'KI-Anfragen') })}</span>`);

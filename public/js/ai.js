@@ -24,7 +24,8 @@ export async function aiStatus(force = false) {
       cache: 'no-store',
     });
     const data = await res.json();
-    statusCache = { available: !!(data.ok && data.enabled), ...data };
+    // paused: Das KI-Budget dieser Woche ist aufgebraucht.
+    statusCache = { available: !!(data.ok && data.enabled && !data.paused), ...data };
   } catch {
     statusCache = { available: false, offline: !navigator.onLine };
   }
@@ -53,6 +54,7 @@ export async function askAI(task, payload) {
     // Antwort ist kein JSON, z. B. weil PHP nicht läuft.
   }
   if (!res.ok || !data?.ok) {
+    if (data?.paused) statusCache = { ...(statusCache || {}), available: false, paused: true };
     throw new AIError(data?.error || t('Die KI ist gerade nicht erreichbar.'), res.status);
   }
   if (typeof data.remaining === 'number') statusCache = { ...(statusCache || {}), remaining: data.remaining };

@@ -136,9 +136,13 @@ export default {
     aiStatus(true).then((status) => {
       const el = root.querySelector('[data-ai-info]');
       if (!el) return;
-      el.textContent = status.available
-        ? `${t('Buddy ist bereit.')}${typeof status.remaining === 'number' ? ` ${t('Heute noch {remaining} von {limit} Anfragen frei.', { remaining: status.remaining, limit: status.limit })}` : ''}`
-        : t('Buddy ist gerade nicht erreichbar. Planer, Karteikarten und Ziele funktionieren trotzdem.');
+      if (status.available) {
+        el.textContent = `${t('Buddy ist bereit.')}${typeof status.remaining === 'number' ? ` ${t('Heute noch {remaining} von {limit} Anfragen frei.', { remaining: status.remaining, limit: status.limit })}` : ''}`;
+      } else if (status.paused) {
+        el.textContent = t('Buddy macht diese Woche Pause: Das KI-Budget ist aufgebraucht. Ab Montag geht es weiter.');
+      } else {
+        el.textContent = t('Buddy ist gerade nicht erreichbar. Planer, Karteikarten und Ziele funktionieren trotzdem.');
+      }
     });
 
     const saved = () => toast(t('Gespeichert'), { timeout: 1500 });
