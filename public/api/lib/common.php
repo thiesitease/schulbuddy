@@ -41,9 +41,10 @@ function sb_config(): array
         'base_url' => null,
     ];
     // Gesucht wird: Umgebungsvariable, dann außerhalb des Webverzeichnisses
-    // (bei manitu: /home/sites/<site>/data-private, /home/sites/<site>/web, /home/sites/<site>), zuletzt api/config.php.
+    // (bei manitu: /home/sites/<site>/data-private[/schulbuddy-data], …/web, …), zuletzt api/config.php.
     $files = [
         getenv('SCHULBUDDY_CONFIG') ?: '',
+        dirname($api, 3) . '/data-private/schulbuddy-data/schulbuddy-config.php',
         dirname($api, 3) . '/data-private/schulbuddy-config.php',
         dirname($api, 2) . '/schulbuddy-config.php',
         dirname($api, 3) . '/schulbuddy-config.php',
