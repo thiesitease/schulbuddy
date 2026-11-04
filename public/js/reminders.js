@@ -2,13 +2,14 @@
 // vor allem Android/Chrome bei installierter App) und Kalender-Export als .ics.
 import { addDays, todayISO } from './dates.js';
 import { buildPlan } from './planner.js';
+import { t, subjectName, examTypeName } from './i18n.js';
 
 const DATA_CACHE = 'sb-data';
 const REMINDER_URL = './__sb/reminders.json';
 const SITE = 'schoolbuddy.hamburgrissen.de';
 
 function examName(exam) {
-  return `${exam.subject}: ${exam.type || 'Klassenarbeit'}${exam.title ? ` – ${exam.title}` : ''}`;
+  return `${subjectName(exam.subject)}: ${examTypeName(exam.type || 'Klassenarbeit')}${exam.title ? ` – ${exam.title}` : ''}`;
 }
 
 export function reminderItems(state, today = todayISO()) {
@@ -19,13 +20,14 @@ export function reminderItems(state, today = todayISO()) {
     const d = addDays(today, i);
     const day = plan.days[d];
     if (!day?.sessions.length) continue;
-    const subjects = [...new Set(day.sessions.map((s) => state.exams.find((e) => e.id === s.examId)?.subject))];
+    const subjects = [...new Set(day.sessions.map((s) => subjectName(state.exams.find((e) => e.id === s.examId)?.subject)))];
+    const count = day.sessions.length === 1 ? t('1 Einheit') : t('{n} Einheiten', { n: day.sessions.length });
     items.push({
       id: `plan:${d}`,
       date: d,
       time,
-      title: 'Zeit zum Lernen 📚',
-      body: `${day.sessions.length === 1 ? '1 Einheit' : `${day.sessions.length} Einheiten`} (${day.used} Min.): ${subjects.join(', ')}`,
+      title: t('Zeit zum Lernen 📚'),
+      body: t('{count} ({minutes} Min.): {subjects}', { count, minutes: day.used, subjects: subjects.join(', ') }),
     });
   }
   for (const e of state.exams) {
@@ -34,13 +36,13 @@ export function reminderItems(state, today = todayISO()) {
       id: `exam:${e.id}`,
       date: addDays(e.date, -1),
       time,
-      title: `Morgen: ${examName(e)}`,
-      body: 'Mach die Generalprobe, pack deine Sachen und geh früh schlafen. Du schaffst das! 💪',
+      title: t('Morgen: {exam}', { exam: examName(e) }),
+      body: t('Mach die Generalprobe, pack deine Sachen und geh früh schlafen. Du schaffst das! 💪'),
     });
   }
   for (const h of state.homework) {
     if (h.done || h.due < today) continue;
-    items.push({ id: `hw:${h.id}`, date: addDays(h.due, -1), time, title: `Hausaufgabe bis morgen: ${h.subject}`, body: h.text });
+    items.push({ id: `hw:${h.id}`, date: addDays(h.due, -1), time, title: t('Hausaufgabe bis morgen: {subject}', { subject: subjectName(h.subject) }), body: h.text });
   }
   return items.filter((item) => item.date >= today);
 }
@@ -94,7 +96,7 @@ export async function disableNotifications() {
 export async function testNotification() {
   const reg = await navigator.serviceWorker.ready;
   await reg.showNotification('SchoolBuddy', {
-    body: 'So sehen deine Erinnerungen aus. 👋',
+    body: t('So sehen deine Erinnerungen aus. 👋'),
     icon: 'assets/icons/icon-192.png',
     tag: 'sb-test',
   });
@@ -145,11 +147,11 @@ export function buildICS(state, { sessions = true } = {}) {
   };
 
   for (const e of state.exams.filter((x) => x.date >= today)) {
-    const topics = (e.topics || []).map((t) => `• ${t.name}`).join('\n');
-    event(`exam-${e.id}`, e.date, `📝 ${examName(e)}`, topics ? `Themen:\n${topics}` : '', trigger(time, true));
+    const topics = (e.topics || []).map((topic) => `• ${topic.name}`).join('\n');
+    event(`exam-${e.id}`, e.date, `📝 ${examName(e)}`, topics ? `${t('Themen:')}\n${topics}` : '', trigger(time, true));
   }
   for (const h of state.homework.filter((x) => !x.done && x.due >= today)) {
-    event(`hw-${h.id}`, h.due, `✏️ ${h.subject}: ${h.text}`, '', trigger(time, true));
+    event(`hw-${h.id}`, h.due, `✏️ ${subjectName(h.subject)}: ${h.text}`, '', trigger(time, true));
   }
   if (sessions) {
     const plan = buildPlan(state, today);
@@ -158,9 +160,10 @@ export function buildICS(state, { sessions = true } = {}) {
       if (!day.sessions.length) continue;
       const list = day.sessions.map((s) => {
         const exam = state.exams.find((e) => e.id === s.examId);
-        return `• ${exam?.subject}: ${s.kind === 'final' ? 'Generalprobe' : s.topic} (${s.minutes} Min.)`;
+        return `• ${subjectName(exam?.subject)}: ${s.kind === 'final' ? t('Generalprobe') : s.topic} (${t('{n} Min.', { n: s.minutes })})`;
       });
-      event(`plan-${d}`, d, `📚 Lernen (${day.used} Min.)`, `${list.join('\n')}\n\nStand: ${today}. Der aktuelle Plan steht in SchoolBuddy.`, trigger(time, false));
+      event(`plan-${d}`, d, `📚 ${t('Lernen ({n} Min.)', { n: day.used })}`,
+        `${list.join('\n')}\n\n${t('Stand: {date}. Der aktuelle Plan steht in SchoolBuddy.', { date: today })}`, trigger(time, false));
     }
   }
   lines.push('END:VCALENDAR');

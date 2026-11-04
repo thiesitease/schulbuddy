@@ -24,6 +24,8 @@ final class Db
         ]);
         if ($pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite') {
             $pdo->exec('PRAGMA busy_timeout = 5000');
+            // Gelöschte Daten überschreiben statt nur als frei markieren (Konto löschen, Chat entfernen).
+            $pdo->exec('PRAGMA secure_delete = ON');
         }
         self::migrate($pdo);
         return $pdo;
@@ -65,6 +67,36 @@ final class Db
         ];
         foreach ($tables as $table) {
             $pdo->exec("CREATE TABLE IF NOT EXISTS {$table}{$suffix}");
+        }
+        $pdo->exec("CREATE TABLE IF NOT EXISTS sb_meta (name VARCHAR(40) PRIMARY KEY, value VARCHAR(255) NOT NULL){$suffix}");
+        $version = (int) $pdo->query("SELECT value FROM sb_meta WHERE name = 'data_version'")->fetchColumn();
+        if ($version < 1) {
+            self::removeChats($pdo);
+            $pdo->exec("REPLACE INTO sb_meta (name, value) VALUES ('data_version', '1')");
+            if (!$mysql) {
+                // Alte Inhalte auch aus freien Seiten der Datei entfernen.
+                try {
+                    $pdo->exec('VACUUM');
+                } catch (\PDOException) {
+                    // Datenbank gerade belegt: kein Problem, secure_delete greift ab jetzt trotzdem.
+                }
+            }
+        }
+    }
+
+    /** Der Chatverlauf bleibt auf dem Gerät; ältere App-Versionen hatten ihn mit ins Konto gespeichert. */
+    private static function removeChats(PDO $pdo): void
+    {
+        $rows = $pdo->query("SELECT user_id, data FROM sb_user_data WHERE data LIKE '%\"chat\"%'")->fetchAll();
+        // Nur ändern, wenn inzwischen niemand anderes gespeichert hat. Die Version bleibt gleich.
+        $update = $pdo->prepare('UPDATE sb_user_data SET data = ? WHERE user_id = ? AND data = ?');
+        foreach ($rows as $row) {
+            $data = json_decode($row['data']);
+            if (!$data instanceof \stdClass || !property_exists($data, 'chat')) {
+                continue;
+            }
+            unset($data->chat);
+            $update->execute([json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), $row['user_id'], $row['data']]);
         }
     }
 

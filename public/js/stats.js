@@ -1,17 +1,18 @@
 // Auswertungen für Fortschritt, Ziele und Wissenslücken. Reine Funktionen.
 import { addDays, startOfWeek, startOfMonth, endOfMonth } from './dates.js';
 import { findTask } from './planner.js';
+import { t } from './i18n.js';
 
 export const GOAL_TYPES = {
-  minutes: { label: 'Lernminuten', unit: 'Min.' },
-  sessions: { label: 'Lerneinheiten', unit: 'Einheiten' },
-  cards: { label: 'Karteikarten wiederholen', unit: 'Karten' },
-  quizzes: { label: 'Quizze machen', unit: 'Quizze' },
-  custom: { label: 'Eigenes Ziel', unit: '' },
+  minutes: { label: t('Lernminuten'), unit: t('Min.') },
+  sessions: { label: t('Lerneinheiten'), unit: t('Einheiten') },
+  cards: { label: t('Karteikarten wiederholen'), unit: t('Karten') },
+  quizzes: { label: t('Quizze machen'), unit: t('Quizze') },
+  custom: { label: t('Eigenes Ziel'), unit: '' },
 };
 
 export const goalLabel = (g) =>
-  g.type === 'custom' ? g.label : `${g.target} ${GOAL_TYPES[g.type].unit} ${g.period === 'month' ? 'im Monat' : 'pro Woche'}`;
+  g.type === 'custom' ? g.label : `${g.target} ${GOAL_TYPES[g.type].unit} ${g.period === 'month' ? t('im Monat') : t('pro Woche')}`;
 
 const isActive = (a) => !!a && (a.minutes > 0 || a.sessions > 0 || a.cards > 0 || a.quizzes > 0);
 
@@ -79,6 +80,7 @@ export function knowledgeGaps(state) {
 export function minutesBySubject(state) {
   const out = {};
   for (const [key, c] of Object.entries(state.completed)) {
+    // Ohne Prüfung (gelöscht) unter einem festen Schlüssel sammeln; die Anzeige übersetzt ihn.
     const subject = findTask(state, key)?.exam.subject || 'Sonstiges';
     out[subject] = (out[subject] || 0) + (c.minutes || 0);
   }

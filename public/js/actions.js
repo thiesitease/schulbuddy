@@ -1,8 +1,9 @@
 // Aktionen, die von mehreren Ansichten genutzt werden.
 import { update, logActivity } from './store.js';
 import { todayISO } from './dates.js';
+import { subjectName, examTypeName } from './i18n.js';
 
-export const examLabel = (exam) => `${exam.subject} · ${exam.type || 'Klassenarbeit'}`;
+export const examLabel = (exam) => `${subjectName(exam.subject)} · ${examTypeName(exam.type || 'Klassenarbeit')}`;
 
 export function completeSession(task) {
   update((s) => {

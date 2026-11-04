@@ -3,35 +3,36 @@ import { html, raw, icon, subjectDot, subjectColor, bar } from './ui.js';
 import { KIND_LABEL } from './planner.js';
 import { relDay, fmtDate, diffDays } from './dates.js';
 import { examLabel } from './actions.js';
+import { t, subjectName } from './i18n.js';
 
 export function sessionTitle(session) {
-  return session.kind === 'final' ? 'Generalprobe: alle Themen' : `${KIND_LABEL[session.kind]}: ${session.topic}`;
+  return session.kind === 'final' ? t('Generalprobe: alle Themen') : `${KIND_LABEL[session.kind]}: ${session.topic}`;
 }
 
 export function sessionRow(session, exam, today, { done = false } = {}) {
   const title = sessionTitle(session);
   return html`<li class="session ${done ? 'is-done' : ''}">
     <button type="button" class="check" data-action="toggle-session" data-key="${session.key}"
-      aria-pressed="${String(done)}" aria-label="${done ? 'Wieder offen' : 'Erledigt'}: ${title}">${icon('check')}</button>
+      aria-pressed="${String(done)}" aria-label="${done ? t('Wieder offen') : t('Erledigt')}: ${title}">${icon('check')}</button>
     <button type="button" class="session-main" ${done ? '' : html`data-action="focus" data-key="${session.key}"`}>
       <span class="session-title">${title}</span>
-      <span class="session-meta">${subjectDot(exam.subject)}${exam.subject} · ${exam.type || 'Klassenarbeit'} ${relDay(exam.date, today)} · ${session.minutes} Min.</span>
+      <span class="session-meta">${subjectDot(exam.subject)}${examLabel(exam)} ${relDay(exam.date, today)} · ${t('{n} Min.', { n: session.minutes })}</span>
     </button>
-    ${done ? '' : html`<button type="button" class="icon-btn soft" data-action="focus" data-key="${session.key}" aria-label="Fokus-Timer für ${title} starten">${icon('play')}</button>`}
+    ${done ? '' : html`<button type="button" class="icon-btn soft" data-action="focus" data-key="${session.key}" aria-label="${t('Fokus-Timer für {title} starten', { title })}">${icon('play')}</button>`}
   </li>`;
 }
 
 export function examCard(exam, progress, today) {
   const days = diffDays(today, exam.date);
-  const count = days === 0 ? 'Heute' : days === 1 ? 'Morgen' : days < 0 ? fmtDate(exam.date, 'day') : String(days);
+  const count = days === 0 ? t('Heute') : days === 1 ? t('Morgen') : days < 0 ? fmtDate(exam.date, 'day') : String(days);
   const pct = progress?.total ? (progress.done / progress.total) * 100 : 0;
   return html`<button type="button" class="exam-card" data-action="edit-exam" data-id="${exam.id}" style="--c:${subjectColor(exam.subject)}">
-    <span class="exam-count ${days > 1 ? '' : 'small'}"><strong>${count}</strong>${days > 1 ? html`<small>Tage</small>` : ''}</span>
+    <span class="exam-count ${days > 1 ? '' : 'small'}"><strong>${count}</strong>${days > 1 ? html`<small>${t('Tage')}</small>` : ''}</span>
     <span class="exam-info">
       <span class="exam-title">${examLabel(exam)}</span>
       <span class="exam-sub">${exam.title ? `${exam.title} · ` : ''}${fmtDate(exam.date, 'long')}</span>
-      ${progress ? html`${bar(pct)}<span class="exam-progress">${progress.done} von ${progress.total} Einheiten erledigt</span>` : ''}
-      ${days < 0 && exam.grade ? html`<span class="exam-progress">Note: ${exam.grade}</span>` : ''}
+      ${progress ? html`${bar(pct)}<span class="exam-progress">${t('{done} von {total} Einheiten erledigt', { done: progress.done, total: progress.total })}</span>` : ''}
+      ${days < 0 && exam.grade ? html`<span class="exam-progress">${t('Note: {grade}', { grade: exam.grade })}</span>` : ''}
     </span>
     ${icon('right', 'chev')}
   </button>`;
@@ -39,12 +40,13 @@ export function examCard(exam, progress, today) {
 
 export function homeworkRow(h, today) {
   const overdue = !h.done && h.due < today;
+  const due = t('fällig {when}', { when: relDay(h.due, today) });
   return html`<li class="hw ${h.done ? 'is-done' : ''}">
     <button type="button" class="check" data-action="toggle-hw" data-id="${h.id}" aria-pressed="${String(!!h.done)}"
-      aria-label="${h.done ? 'Wieder offen' : 'Erledigt'}: ${h.text}">${icon('check')}</button>
+      aria-label="${h.done ? t('Wieder offen') : t('Erledigt')}: ${h.text}">${icon('check')}</button>
     <button type="button" class="hw-main" data-action="edit-hw" data-id="${h.id}">
       <span class="hw-text">${h.text}</span>
-      <span class="hw-meta ${overdue ? 'is-overdue' : ''}">${subjectDot(h.subject)}${h.subject} · ${overdue ? 'überfällig, ' : ''}fällig ${relDay(h.due, today)}</span>
+      <span class="hw-meta ${overdue ? 'is-overdue' : ''}">${subjectDot(h.subject)}${subjectName(h.subject)} · ${overdue ? t('überfällig, {due}', { due }) : due}</span>
     </button>
   </li>`;
 }
@@ -57,7 +59,7 @@ export const sectionHead = (title, action = '') =>
 
 /** Segment-Umschalter, der per Link navigiert. */
 export function tabs(items, active) {
-  return html`<nav class="segmented" aria-label="Bereiche">${items.map(
+  return html`<nav class="segmented" aria-label="${t('Bereiche')}">${items.map(
     (t) => html`<a href="${t.href}" class="${t.id === active ? 'active' : ''}" ${t.id === active ? html`aria-current="page"` : ''}>${t.label}</a>`,
   )}</nav>`;
 }
@@ -75,7 +77,7 @@ export const providerLogo = (id) => raw(`<span class="provider-logo">${PROVIDER_
 /** Anmelde-Buttons für die eingerichteten Anbieter. */
 export const providerButtons = (providers) =>
   html`<div class="providers">${providers.map(
-    (p) => html`<button type="button" class="provider-btn ${p.id}" data-action="login" data-provider="${p.id}">${providerLogo(p.id)}<span>Mit ${p.label} anmelden</span></button>`,
+    (p) => html`<button type="button" class="provider-btn ${p.id}" data-action="login" data-provider="${p.id}">${providerLogo(p.id)}<span>${t('Mit {provider} anmelden', { provider: p.label })}</span></button>`,
   )}</div>`;
 
 export const pageHead = (title, subtitle = '', action = '') =>

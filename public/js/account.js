@@ -2,6 +2,7 @@
 // zwischen Geräten. Ohne Anmeldung bleibt alles wie gehabt nur auf dem Gerät.
 import { getState, update, onChange, replaceState, resetAll } from './store.js';
 import { html, openModal, confirmDialog, toast } from './ui.js';
+import { t, getLang } from './i18n.js';
 
 const PUSH_DELAY = 1500;
 const PULL_INTERVAL = 30_000;
@@ -35,7 +36,7 @@ async function api(path, options = {}) {
     cache: 'no-store',
     signal: AbortSignal.timeout?.(20_000),
     ...options,
-    headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
+    headers: { Accept: 'application/json', 'X-SchulBuddy-Lang': getLang(), ...(options.body ? { 'Content-Type': 'application/json' } : {}) },
   });
   let data = null;
   try {
@@ -55,11 +56,12 @@ const hasLocalData = (s) =>
   s.profile.onboarded &&
   (s.exams.length || s.homework.length || s.decks.length || s.goals.length || s.quizzes.length || Object.keys(s.completed).length);
 
-/** Was synchronisiert wird: alles außer gerätebezogenen Angaben. */
+/** Was synchronisiert wird: alles außer gerätebezogenen Angaben und dem Chatverlauf (bleibt auf dem Gerät). */
 function payload(s) {
   const data = structuredClone(s);
   for (const key of ['deviceId', 'installDismissed', 'sync', 'createdOn']) delete data.meta[key];
   delete data.settings.reminders;
+  delete data.chat;
   return data;
 }
 
@@ -73,6 +75,7 @@ function applyRemote(rev, data) {
   const local = getState();
   replaceState({
     ...data,
+    chat: local.chat,
     meta: {
       ...(data.meta || {}),
       deviceId: local.meta.deviceId,
@@ -92,9 +95,9 @@ function chooseVersion(title, text) {
     openModal({
       title,
       body: html`<div class="stack"><p>${text}</p>
-        <button type="button" class="btn primary block" data-choice="remote">Stand aus dem Konto laden</button>
-        <button type="button" class="btn ghost block" data-choice="local">Stand von diesem Gerät behalten</button>
-        <p class="muted small">Der andere Stand wird dabei überschrieben.</p></div>`,
+        <button type="button" class="btn primary block" data-choice="remote">${t('Stand aus dem Konto laden')}</button>
+        <button type="button" class="btn ghost block" data-choice="local">${t('Stand von diesem Gerät behalten')}</button>
+        <p class="muted small">${t('Der andere Stand wird dabei überschrieben.')}</p></div>`,
       onMount(m, close) {
         m.querySelectorAll('[data-choice]').forEach((b) =>
           b.addEventListener('click', () => {
@@ -125,8 +128,8 @@ async function pull() {
       return pushNow();
     }
     if (!hasLocalData(s)) return applyRemote(data.rev, data.data);
-    const choice = await chooseVersion('Welche Daten möchtest du nutzen?',
-      'In deinem Konto sind schon Lerndaten gespeichert, und auf diesem Gerät auch.');
+    const choice = await chooseVersion(t('Welche Daten möchtest du nutzen?'),
+      t('In deinem Konto sind schon Lerndaten gespeichert, und auf diesem Gerät auch.'));
     if (choice === 'remote') return applyRemote(data.rev, data.data);
     if (choice === 'local') {
       setSync({ userId: info.user.id, rev: data.rev, dirty: true });
@@ -149,8 +152,8 @@ async function resolveConflict(rev, data) {
   resolving = true;
   let choice;
   try {
-    choice = await chooseVersion('Änderungen auf zwei Geräten',
-      'Auf einem anderen Gerät wurde inzwischen etwas geändert, während du hier auch etwas geändert hast.');
+    choice = await chooseVersion(t('Änderungen auf zwei Geräten'),
+      t('Auf einem anderen Gerät wurde inzwischen etwas geändert, während du hier auch etwas geändert hast.'));
   } finally {
     resolving = false;
   }
@@ -165,7 +168,7 @@ function lostSession() {
   info = { ...info, user: null };
   setState('idle');
   emit('info');
-  toast('Deine Anmeldung ist abgelaufen. Melde dich in den Einstellungen erneut an.', { timeout: 6000 });
+  toast(t('Deine Anmeldung ist abgelaufen. Melde dich in den Einstellungen erneut an.'), { timeout: 6000 });
 }
 
 function schedulePush(delay = PUSH_DELAY) {
@@ -248,10 +251,13 @@ export function rememberProviderName(name) {
 /** Abmelden: Änderungen noch hochladen, dann Daten von diesem Gerät entfernen (sie bleiben im Konto). */
 export async function logout() {
   await pushNow();
-  const message = getState().meta.sync?.dirty
-    ? 'Einige Änderungen sind noch nicht im Konto gespeichert und gehen beim Abmelden verloren. Trotzdem abmelden?'
-    : 'Deine Daten bleiben in deinem Konto und werden von diesem Gerät entfernt.';
-  if (!(await confirmDialog(message, { confirmText: 'Abmelden' }))) return false;
+  const s = getState();
+  // Der Chat liegt nicht im Konto und ist nach dem Abmelden weg.
+  const chat = s.chat.length ? t('Der Chatverlauf mit Buddy wird dabei gelöscht.') : '';
+  const message = s.meta.sync?.dirty
+    ? [t('Einige Änderungen sind noch nicht im Konto gespeichert und gehen beim Abmelden verloren.'), chat, t('Trotzdem abmelden?')]
+    : [t('Deine Daten bleiben in deinem Konto und werden von diesem Gerät entfernt.'), chat];
+  if (!(await confirmDialog(message.filter(Boolean).join(' '), { confirmText: t('Abmelden') }))) return false;
   await api('api/auth.php?action=logout', { method: 'POST' }).catch(() => null);
   info = { ...info, user: null };
   givenName = '';
@@ -264,7 +270,7 @@ export async function logout() {
 /** Konto löschen: alles auf dem Server wird entfernt, die Daten auf diesem Gerät bleiben. */
 export async function deleteAccount() {
   const { data } = await api('api/auth.php?action=delete', { method: 'POST' });
-  if (!data?.ok) throw new Error(data?.error || 'Das Konto konnte nicht gelöscht werden.');
+  if (!data?.ok) throw new Error(data?.error || t('Das Konto konnte nicht gelöscht werden.'));
   info = { ...info, user: null };
   update((s) => {
     s.meta.sync = null;

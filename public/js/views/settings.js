@@ -7,42 +7,45 @@ import { enableNotifications, disableNotifications, notificationsSupported, test
 import { aiStatus } from '../ai.js';
 import { canInstall, promptInstall, isStandalone, isIOS } from '../pwa.js';
 import { accountInfo, syncStatus, onAccountChange, login, logout, deleteAccount, pushNow } from '../account.js';
+import { t, getLang, setLang, LANGS, locale, subjectName, privacyUrl } from '../i18n.js';
 
 const MINUTE_OPTIONS = [0, 15, 20, 30, 40, 45, 60, 75, 90, 120];
 
 function syncLabel() {
   const { state, dirty, at } = syncStatus();
-  if (state === 'syncing') return 'Wird synchronisiert …';
-  if (state === 'offline') return 'Offline – wird synchronisiert, sobald du wieder online bist.';
-  if (state === 'error') return 'Synchronisierung hat nicht geklappt. SchoolBuddy versucht es erneut.';
-  if (dirty) return 'Änderungen werden gleich gespeichert …';
-  if (!at) return 'Noch nicht synchronisiert.';
+  if (state === 'syncing') return t('Wird synchronisiert …');
+  if (state === 'offline') return t('Offline – wird synchronisiert, sobald du wieder online bist.');
+  if (state === 'error') return t('Synchronisierung hat nicht geklappt. SchoolBuddy versucht es erneut.');
+  if (dirty) return t('Änderungen werden gleich gespeichert …');
+  if (!at) return t('Noch nicht synchronisiert.');
   const minutes = Math.round((Date.now() - at) / 60000);
-  return `Synchronisiert ${minutes < 1 ? 'gerade eben' : minutes < 60 ? `vor ${minutes} Min.` : `am ${new Date(at).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}`}.`;
+  if (minutes < 1) return t('Synchronisiert gerade eben.');
+  if (minutes < 60) return t('Synchronisiert vor {n} Min.', { n: minutes });
+  return t('Synchronisiert am {date}.', { date: new Date(at).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' }) });
 }
 
 function accountCard() {
   const info = accountInfo();
   if (info.user) {
     return html`<section class="card stack" aria-labelledby="set-account">
-      <h2 id="set-account">${icon('cloud')} Konto</h2>
+      <h2 id="set-account">${icon('cloud')} ${t('Konto')}</h2>
       <div class="row">${providerLogo(info.user.provider)}
-        <span class="grow"><strong>Angemeldet mit ${PROVIDER_NAMES[info.user.provider] || info.user.provider}</strong><br>
+        <span class="grow"><strong>${t('Angemeldet mit {provider}', { provider: PROVIDER_NAMES[info.user.provider] || info.user.provider })}</strong><br>
           <span class="muted small" data-sync-status>${syncLabel()}</span></span></div>
-      <p class="muted small">Deine Lerndaten werden automatisch zwischen deinen Geräten abgeglichen.</p>
+      <p class="muted small">${t('Deine Lerndaten werden automatisch zwischen deinen Geräten abgeglichen.')}</p>
       <div class="row wrap gap">
-        <button type="button" class="btn ghost sm" data-action="sync-now">${icon('refresh')} Jetzt synchronisieren</button>
-        <button type="button" class="btn ghost sm" data-action="logout">Abmelden</button>
-        <button type="button" class="btn ghost sm danger-text" data-action="delete-account">${icon('trash')} Konto löschen</button>
+        <button type="button" class="btn ghost sm" data-action="sync-now">${icon('refresh')} ${t('Jetzt synchronisieren')}</button>
+        <button type="button" class="btn ghost sm" data-action="logout">${t('Abmelden')}</button>
+        <button type="button" class="btn ghost sm danger-text" data-action="delete-account">${icon('trash')} ${t('Konto löschen')}</button>
       </div>
     </section>`;
   }
   if (!info.providers.length) return '';
   return html`<section class="card stack" aria-labelledby="set-account">
-    <h2 id="set-account">${icon('cloud')} Konto <span class="badge">optional</span></h2>
-    <p class="small">Melde dich an, um deine Lerndaten auf Handy, Tablet und Computer zu nutzen. Ohne Konto bleibt alles nur auf diesem Gerät.</p>
+    <h2 id="set-account">${icon('cloud')} ${t('Konto')} <span class="badge">${t('optional')}</span></h2>
+    <p class="small">${t('Melde dich an, um deine Lerndaten auf Handy, Tablet und Computer zu nutzen. Ohne Konto bleibt alles nur auf diesem Gerät.')}</p>
     ${providerButtons(info.providers)}
-    <p class="muted small">SchoolBuddy übernimmt dabei nur deinen Vornamen als Vorschlag für dein Profil und speichert ihn nicht auf dem Server. Deine E-Mail-Adresse fragen wir nicht ab. <a href="datenschutz.html">Mehr dazu</a></p>
+    <p class="muted small">${t('SchoolBuddy übernimmt dabei nur deinen Vornamen als Vorschlag für dein Profil und speichert ihn nicht auf dem Server. Deine E-Mail-Adresse fragen wir nicht ab.')} <a href="${privacyUrl()}">${t('Mehr dazu')}</a></p>
   </section>`;
 }
 
@@ -54,115 +57,133 @@ export default {
     const weekTotal = st.minutesByWeekday.reduce((a, b) => a + b, 0);
     const allSubjects = [...SUBJECTS, ...p.subjects.filter((x) => !SUBJECTS.includes(x))];
     const permission = notificationsSupported() ? Notification.permission : 'unsupported';
+    // Mit Konto kämen gelöschte Daten beim nächsten Abgleich zurück, daher dort kein „Alles löschen“.
+    const signedIn = !!accountInfo().user;
+    const themes = [['auto', t('Automatisch')], ['light', t('Hell')], ['dark', t('Dunkel')]];
 
     root.innerHTML = String(html`
-      ${pageHead('Einstellungen')}
+      ${pageHead(t('Einstellungen'))}
 
       ${accountCard()}
 
       <section class="card stack" aria-labelledby="set-profile">
-        <h2 id="set-profile">${icon('home')} Profil</h2>
+        <h2 id="set-profile">${icon('home')} ${t('Profil')}</h2>
         <div class="grid-2">
-          <label class="field"><span>Vorname</span><input name="name" value="${p.name}" maxlength="30" autocomplete="given-name"></label>
-          <label class="field"><span>Klasse</span><select name="grade">${[5, 6, 7, 8, 9, 10, 11, 12, 13].map((g) => html`<option value="${g}" ${g === p.grade ? 'selected' : ''}>Klasse ${g}</option>`)}</select></label>
+          <label class="field"><span>${t('Vorname')}</span><input name="name" value="${p.name}" maxlength="30" autocomplete="given-name"></label>
+          <label class="field"><span>${t('Klasse')}</span><select name="grade">${[5, 6, 7, 8, 9, 10, 11, 12, 13].map((g) => html`<option value="${g}" ${g === p.grade ? 'selected' : ''}>${t('Klasse {n}', { n: g })}</option>`)}</select></label>
         </div>
-        <div class="field"><span>Deine Fächer</span>
-          <div class="chips">${allSubjects.map((x) => html`<button type="button" class="chip ${p.subjects.includes(x) ? 'on' : ''}" data-action="subject" data-name="${x}" aria-pressed="${String(p.subjects.includes(x))}">${x}</button>`)}</div>
-          <form class="row gap" data-form="custom-subject"><input name="custom" maxlength="30" placeholder="Anderes Fach hinzufügen" aria-label="Anderes Fach"><button class="btn ghost sm">${icon('plus')} Hinzufügen</button></form>
+        <div class="field"><span>${t('Deine Fächer')}</span>
+          <div class="chips">${allSubjects.map((x) => html`<button type="button" class="chip ${p.subjects.includes(x) ? 'on' : ''}" data-action="subject" data-name="${x}" aria-pressed="${String(p.subjects.includes(x))}">${subjectName(x)}</button>`)}</div>
+          <form class="row gap" data-form="custom-subject"><input name="custom" maxlength="30" placeholder="${t('Anderes Fach hinzufügen')}" aria-label="${t('Anderes Fach')}"><button class="btn ghost sm">${icon('plus')} ${t('Hinzufügen')}</button></form>
         </div>
       </section>
 
       <section class="card stack" aria-labelledby="set-time" id="lernzeiten">
-        <h2 id="set-time">${icon('clock')} Lernzeiten</h2>
-        <p class="muted small">So viel Zeit plant SchoolBuddy pro Tag für dich ein. Zusammen: ${formatMinutes(weekTotal)} pro Woche.</p>
+        <h2 id="set-time">${icon('clock')} ${t('Lernzeiten')}</h2>
+        <p class="muted small">${t('So viel Zeit plant SchoolBuddy pro Tag für dich ein. Zusammen: {total} pro Woche.', { total: formatMinutes(weekTotal) })}</p>
         <div class="weekdays">${WEEKDAYS_LONG.map((d, i) => html`<label class="field inline"><span>${d}</span>
-          <select name="day-${i}">${MINUTE_OPTIONS.map((m) => html`<option value="${m}" ${m === st.minutesByWeekday[i] ? 'selected' : ''}>${m ? `${m} Min.` : 'frei'}</option>`)}</select></label>`)}</div>
-        <label class="field"><span>Länge einer Lerneinheit</span><select name="sessionMinutes">${[15, 20, 25, 30, 45].map((m) => html`<option value="${m}" ${m === st.sessionMinutes ? 'selected' : ''}>${m} Minuten</option>`)}</select>
-          <small class="muted">Schwere Themen bekommen automatisch etwas mehr Zeit.</small></label>
+          <select name="day-${i}">${MINUTE_OPTIONS.map((m) => html`<option value="${m}" ${m === st.minutesByWeekday[i] ? 'selected' : ''}>${m ? t('{n} Min.', { n: m }) : t('frei')}</option>`)}</select></label>`)}</div>
+        <label class="field"><span>${t('Länge einer Lerneinheit')}</span><select name="sessionMinutes">${[15, 20, 25, 30, 45].map((m) => html`<option value="${m}" ${m === st.sessionMinutes ? 'selected' : ''}>${t('{n} Minuten', { n: m })}</option>`)}</select>
+          <small class="muted">${t('Schwere Themen bekommen automatisch etwas mehr Zeit.')}</small></label>
       </section>
 
       <section class="card stack" aria-labelledby="set-reminders">
-        <h2 id="set-reminders">${icon('bell')} Erinnerungen</h2>
+        <h2 id="set-reminders">${icon('bell')} ${t('Erinnerungen')}</h2>
         ${permission === 'unsupported'
-          ? html`<p class="muted small">Dein Browser unterstützt keine Benachrichtigungen. Nutze den Kalender-Export.</p>`
-          : html`<label class="switch-row"><span><strong>Benachrichtigungen</strong><small class="muted">An Lerneinheiten, Prüfungen und Hausaufgaben am Vortag</small></span>
+          ? html`<p class="muted small">${t('Dein Browser unterstützt keine Benachrichtigungen. Nutze den Kalender-Export.')}</p>`
+          : html`<label class="switch-row"><span><strong>${t('Benachrichtigungen')}</strong><small class="muted">${t('An Lerneinheiten, Prüfungen und Hausaufgaben am Vortag')}</small></span>
               <input type="checkbox" role="switch" name="reminders" ${st.reminders && permission === 'granted' ? 'checked' : ''}></label>
-            ${permission === 'denied' ? html`<p class="form-error">Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Website-Einstellungen.</p>` : ''}
-            <p class="muted small">${isIOS() && !isStandalone() ? 'Auf dem iPhone funktionieren Benachrichtigungen nur, wenn SchoolBuddy auf dem Home-Bildschirm installiert ist.' : 'Hintergrund-Erinnerungen klappen am besten mit installierter App unter Android. Das Gerät entscheidet, wann geprüft wird.'}</p>
-            ${st.reminders && permission === 'granted' ? html`<button type="button" class="btn ghost sm" data-action="test-notification">Test-Benachrichtigung</button>` : ''}`}
-        <label class="field inline"><span>Uhrzeit für Erinnerungen</span><input type="time" name="reminderTime" value="${st.reminderTime}"></label>
-        <div class="row between wrap gap"><span class="small">Am zuverlässigsten: Termine in den Handy-Kalender übernehmen.</span>
-          <button type="button" class="btn ghost sm" data-action="ics">${icon('download')} Kalender-Export</button></div>
+            ${permission === 'denied' ? html`<p class="form-error">${t('Benachrichtigungen sind im Browser blockiert. Erlaube sie in den Website-Einstellungen.')}</p>` : ''}
+            <p class="muted small">${isIOS() && !isStandalone() ? t('Auf dem iPhone funktionieren Benachrichtigungen nur, wenn SchoolBuddy auf dem Home-Bildschirm installiert ist.') : t('Hintergrund-Erinnerungen klappen am besten mit installierter App unter Android. Das Gerät entscheidet, wann geprüft wird.')}</p>
+            ${st.reminders && permission === 'granted' ? html`<button type="button" class="btn ghost sm" data-action="test-notification">${t('Test-Benachrichtigung')}</button>` : ''}`}
+        <label class="field inline"><span>${t('Uhrzeit für Erinnerungen')}</span><input type="time" name="reminderTime" value="${st.reminderTime}"></label>
+        <div class="row between wrap gap"><span class="small">${t('Am zuverlässigsten: Termine in den Handy-Kalender übernehmen.')}</span>
+          <button type="button" class="btn ghost sm" data-action="ics">${icon('download')} ${t('Kalender-Export')}</button></div>
       </section>
 
       <section class="card stack" aria-labelledby="set-look">
-        <h2 id="set-look">${icon('sliders')} Darstellung</h2>
-        <fieldset class="field"><legend>Farbschema</legend><div class="choice">
-          ${[['auto', 'Automatisch'], ['light', 'Hell'], ['dark', 'Dunkel']].map(([v, l]) => html`<label><input type="radio" name="theme" value="${v}" ${st.theme === v ? 'checked' : ''}><span>${l}</span></label>`)}
+        <h2 id="set-look">${icon('sliders')} ${t('Darstellung')}</h2>
+        <fieldset class="field"><legend>${getLang() === 'en' ? 'Language · Sprache' : 'Sprache · Language'}</legend><div class="choice">
+          ${Object.entries(LANGS).map(([v, l]) => html`<label><input type="radio" name="lang" value="${v}" ${getLang() === v ? 'checked' : ''}><span lang="${v}">${l}</span></label>`)}
         </div></fieldset>
-        ${canInstall() ? html`<button type="button" class="btn ghost" data-action="install">${icon('download')} SchoolBuddy installieren</button>` : ''}
+        <fieldset class="field"><legend>${t('Farbschema')}</legend><div class="choice">
+          ${themes.map(([v, l]) => html`<label><input type="radio" name="theme" value="${v}" ${st.theme === v ? 'checked' : ''}><span>${l}</span></label>`)}
+        </div></fieldset>
+        ${canInstall() ? html`<button type="button" class="btn ghost" data-action="install">${icon('download')} ${t('SchoolBuddy installieren')}</button>` : ''}
       </section>
 
       <section class="card stack" aria-labelledby="set-ai">
-        <h2 id="set-ai">${icon('sparkles')} KI-Funktionen</h2>
-        <p class="small" data-ai-info>Status wird geprüft …</p>
-        ${s.meta.aiConsent ? html`<button type="button" class="btn ghost sm" data-action="revoke-ai">Einwilligung zurücknehmen</button>` : ''}
-        <a class="btn light block" href="#/premium">${icon('crown')} SchoolBuddy Premium ansehen</a>
+        <h2 id="set-ai">${icon('sparkles')} ${t('KI-Funktionen')}</h2>
+        <p class="small" data-ai-info>${t('Status wird geprüft …')}</p>
+        ${s.meta.aiConsent ? html`<button type="button" class="btn ghost sm" data-action="revoke-ai">${t('Einwilligung zurücknehmen')}</button>` : ''}
       </section>
 
       <section class="card stack" aria-labelledby="set-data">
-        <h2 id="set-data">${icon('download')} Deine Daten</h2>
-        <p class="muted small">Alles bleibt auf diesem Gerät. Sichere deine Daten regelmäßig, z. B. bevor du das Handy wechselst.</p>
+        <h2 id="set-data">${icon('download')} ${t('Deine Daten')}</h2>
+        <p class="muted small">${signedIn
+          ? t('Deine Daten liegen auf diesem Gerät und in deinem Konto. Abmelden entfernt sie von diesem Gerät, „Konto löschen“ auch vom Server.')
+          : t('Alles bleibt auf diesem Gerät. Sichere deine Daten regelmäßig, z. B. bevor du das Handy wechselst.')}</p>
         <div class="row wrap gap">
-          <button type="button" class="btn ghost sm" data-action="export">${icon('download')} Sichern</button>
-          <label class="btn ghost sm file-btn">${icon('upload')} Wiederherstellen<input type="file" accept="application/json,.json" data-import hidden></label>
-          <button type="button" class="btn ghost sm danger-text" data-action="reset">${icon('trash')} Alles löschen</button>
+          <button type="button" class="btn ghost sm" data-action="export">${icon('download')} ${t('Sichern')}</button>
+          <label class="btn ghost sm file-btn">${icon('upload')} ${t('Wiederherstellen')}<input type="file" accept="application/json,.json" data-import hidden></label>
+          ${signedIn ? '' : html`<button type="button" class="btn ghost sm danger-text" data-action="reset">${icon('trash')} ${t('Alles löschen')}</button>`}
         </div>
       </section>
 
-      <p class="legal muted small">SchoolBuddy 1.0 · Deine Schule. Dein Plan. Dein Erfolg.</p>
+      <p class="legal muted small">SchoolBuddy 1.0 · ${t('Deine Schule. Dein Plan. Dein Erfolg.')}</p>
     `);
 
     aiStatus(true).then((status) => {
       const el = root.querySelector('[data-ai-info]');
       if (!el) return;
-      el.textContent = status.available
-        ? `Buddy ist bereit.${typeof status.remaining === 'number' ? ` Heute noch ${status.remaining} von ${status.limit} Anfragen frei.` : ''}`
-        : 'Buddy ist gerade nicht erreichbar. Planer, Karteikarten und Ziele funktionieren trotzdem.';
+      if (status.available) {
+        el.textContent = `${t('Buddy ist bereit.')}${typeof status.remaining === 'number' ? ` ${t('Heute noch {remaining} von {limit} Anfragen frei.', { remaining: status.remaining, limit: status.limit })}` : ''}`;
+      } else if (status.paused) {
+        el.textContent = t('Buddy macht diese Woche Pause: Das KI-Budget ist aufgebraucht. Ab Montag geht es weiter.');
+      } else {
+        el.textContent = t('Buddy ist gerade nicht erreichbar. Planer, Karteikarten und Ziele funktionieren trotzdem.');
+      }
     });
 
-    const saved = () => toast('Gespeichert', { timeout: 1500 });
+    const saved = () => toast(t('Gespeichert'), { timeout: 1500 });
 
     root.onchange = async (e) => {
-      const t = e.target;
-      if (t.matches('[data-import]')) {
-        const file = t.files[0];
+      const el = e.target;
+      if (el.matches('[data-import]')) {
+        const file = el.files[0];
         if (!file) return;
-        if (!(await confirmDialog('Die aktuellen Daten auf diesem Gerät werden durch die Sicherung ersetzt.', { confirmText: 'Wiederherstellen', danger: false }))) return;
+        const message = accountInfo().user
+          ? t('Die aktuellen Daten auf diesem Gerät und in deinem Konto werden durch die Sicherung ersetzt.')
+          : t('Die aktuellen Daten auf diesem Gerät werden durch die Sicherung ersetzt.');
+        if (!(await confirmDialog(message, { confirmText: t('Wiederherstellen'), danger: false }))) return;
         try {
           importJSON(await file.text());
-          toast('Sicherung wiederhergestellt ✓');
+          toast(t('Sicherung wiederhergestellt ✓'));
           ctx.refresh();
         } catch (ex) {
-          toast(ex.message || 'Die Datei konnte nicht gelesen werden.');
+          toast(ex.message || t('Die Datei konnte nicht gelesen werden.'));
         }
         return;
       }
-      if (t.name === 'grade') update((x) => { x.profile.grade = Number(t.value); });
-      else if (t.name === 'sessionMinutes') update((x) => { x.settings.sessionMinutes = Number(t.value); });
-      else if (t.name?.startsWith('day-')) {
-        update((x) => { x.settings.minutesByWeekday[Number(t.name.slice(4))] = Number(t.value); });
+      if (el.name === 'lang') {
+        setLang(el.value);
+        return;
+      }
+      if (el.name === 'grade') update((x) => { x.profile.grade = Number(el.value); });
+      else if (el.name === 'sessionMinutes') update((x) => { x.settings.sessionMinutes = Number(el.value); });
+      else if (el.name?.startsWith('day-')) {
+        update((x) => { x.settings.minutesByWeekday[Number(el.name.slice(4))] = Number(el.value); });
         ctx.refresh();
-      } else if (t.name === 'reminderTime') update((x) => { x.settings.reminderTime = t.value || '16:00'; });
-      else if (t.name === 'theme') {
-        update((x) => { x.settings.theme = t.value; });
+      } else if (el.name === 'reminderTime') update((x) => { x.settings.reminderTime = el.value || '16:00'; });
+      else if (el.name === 'theme') {
+        update((x) => { x.settings.theme = el.value; });
         ctx.refresh();
-      } else if (t.name === 'reminders') {
-        if (t.checked) {
+      } else if (el.name === 'reminders') {
+        if (el.checked) {
           const result = await enableNotifications();
           update((x) => { x.settings.reminders = result.permission === 'granted'; });
-          if (result.permission !== 'granted') toast('Ohne Erlaubnis kann SchoolBuddy keine Benachrichtigungen senden.');
-          else toast(result.background ? 'Erinnerungen sind an 🔔' : 'Erinnerungen sind an. Hintergrund-Prüfung wird von diesem Gerät nicht unterstützt – nutze zusätzlich den Kalender-Export.', { timeout: 6000 });
+          if (result.permission !== 'granted') toast(t('Ohne Erlaubnis kann SchoolBuddy keine Benachrichtigungen senden.'));
+          else toast(result.background ? t('Erinnerungen sind an 🔔') : t('Erinnerungen sind an. Hintergrund-Prüfung wird von diesem Gerät nicht unterstützt – nutze zusätzlich den Kalender-Export.'), { timeout: 6000 });
         } else {
           await disableNotifications();
           update((x) => { x.settings.reminders = false; });
@@ -195,14 +216,14 @@ export default {
         ctx.refresh();
       } else if (action === 'logout') {
         if (await logout()) {
-          toast('Abgemeldet. Deine Daten sind sicher in deinem Konto.');
+          toast(t('Abgemeldet. Deine Daten sind sicher in deinem Konto.'));
           location.hash = '#/today';
         }
       } else if (action === 'delete-account') {
-        if (await confirmDialog('Dein Konto und alle darin gespeicherten Lerndaten werden endgültig gelöscht. Die Daten auf diesem Gerät bleiben erhalten.', { confirmText: 'Konto löschen' })) {
+        if (await confirmDialog(t('Dein Konto und alle darin gespeicherten Lerndaten werden endgültig gelöscht. Die Daten auf diesem Gerät bleiben erhalten.'), { confirmText: t('Konto löschen') })) {
           try {
             await deleteAccount();
-            toast('Konto gelöscht.');
+            toast(t('Konto gelöscht.'));
           } catch (ex) {
             toast(ex.message);
           }
@@ -211,23 +232,23 @@ export default {
       } else if (action === 'subject') {
         const name = a.dataset.name;
         const current = getState().profile.subjects;
-        if (current.includes(name) && current.length === 1) return toast('Mindestens ein Fach brauchst du.');
+        if (current.includes(name) && current.length === 1) return toast(t('Mindestens ein Fach brauchst du.'));
         update((x) => { x.profile.subjects = current.includes(name) ? current.filter((y) => y !== name) : [...current, name]; });
         ctx.refresh();
-      } else if (action === 'test-notification') testNotification().catch(() => toast('Test fehlgeschlagen.'));
+      } else if (action === 'test-notification') testNotification().catch(() => toast(t('Test fehlgeschlagen.')));
       else if (action === 'ics') downloadFile(`schoolbuddy-${todayISO()}.ics`, buildICS(getState()), 'text/calendar;charset=utf-8');
       else if (action === 'install') {
         await promptInstall();
         ctx.refresh();
       } else if (action === 'revoke-ai') {
         update((x) => { x.meta.aiConsent = false; });
-        toast('Einwilligung zurückgenommen. Vor der nächsten KI-Nutzung fragen wir erneut.');
+        toast(t('Einwilligung zurückgenommen. Vor der nächsten KI-Nutzung fragen wir erneut.'));
         ctx.refresh();
       } else if (action === 'export') {
         downloadFile(`schoolbuddy-sicherung-${todayISO()}.json`, exportJSON());
-        toast('Sicherung heruntergeladen ✓');
+        toast(t('Sicherung heruntergeladen ✓'));
       } else if (action === 'reset') {
-        if (await confirmDialog('Wirklich alle Prüfungen, Karteikarten, Ziele und Einstellungen auf diesem Gerät löschen? Das lässt sich nicht rückgängig machen.', { confirmText: 'Alles löschen' })) {
+        if (await confirmDialog(t('Wirklich alle Prüfungen, Karteikarten, Ziele und Einstellungen auf diesem Gerät löschen? Das lässt sich nicht rückgängig machen.'), { confirmText: t('Alles löschen') })) {
           resetAll();
           location.hash = '#/today';
           ctx.refresh();

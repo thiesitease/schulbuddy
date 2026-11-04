@@ -1,6 +1,7 @@
 // Client für den KI-Proxy (api/ai.php). Der API-Schlüssel liegt nur auf dem Server.
 import { getState, update } from './store.js';
-import { html, openModal } from './ui.js';
+import { html, raw, openModal } from './ui.js';
+import { t, getLang, subjectName, privacyUrl } from './i18n.js';
 
 const ENDPOINT = 'api/ai.php';
 
@@ -19,11 +20,12 @@ export async function aiStatus(force = false) {
   try {
     const s = getState();
     const res = await fetch(`${ENDPOINT}?status=1`, {
-      headers: { Accept: 'application/json', 'X-SchulBuddy-Device': s.meta.deviceId },
+      headers: { Accept: 'application/json', 'X-SchulBuddy-Device': s.meta.deviceId, 'X-SchulBuddy-Lang': getLang() },
       cache: 'no-store',
     });
     const data = await res.json();
-    statusCache = { available: !!(data.ok && data.enabled), ...data };
+    // paused: Das KI-Budget dieser Woche ist aufgebraucht.
+    statusCache = { available: !!(data.ok && data.enabled && !data.paused), ...data };
   } catch {
     statusCache = { available: false, offline: !navigator.onLine };
   }
@@ -31,17 +33,19 @@ export async function aiStatus(force = false) {
 }
 
 export async function askAI(task, payload) {
-  if (!navigator.onLine) throw new AIError('Du bist offline. Die KI-Funktionen brauchen Internet.');
+  if (!navigator.onLine) throw new AIError(t('Du bist offline. Die KI-Funktionen brauchen Internet.'));
   const s = getState();
+  // Das Fach geht in der Sprache der App an die KI, gespeichert bleibt der deutsche Name.
+  const subject = payload.subject ? subjectName(payload.subject) : payload.subject;
   let res;
   try {
     res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ task, deviceId: s.meta.deviceId, grade: s.profile.grade, ...payload }),
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-SchulBuddy-Lang': getLang() },
+      body: JSON.stringify({ task, deviceId: s.meta.deviceId, grade: s.profile.grade, ...payload, subject }),
     });
   } catch {
-    throw new AIError('Keine Verbindung zum SchoolBuddy-Server. Versuch es gleich noch einmal.');
+    throw new AIError(t('Keine Verbindung zum SchoolBuddy-Server. Versuch es gleich noch einmal.'));
   }
   let data = null;
   try {
@@ -50,7 +54,8 @@ export async function askAI(task, payload) {
     // Antwort ist kein JSON, z. B. weil PHP nicht läuft.
   }
   if (!res.ok || !data?.ok) {
-    throw new AIError(data?.error || 'Die KI ist gerade nicht erreichbar.', res.status);
+    if (data?.paused) statusCache = { ...(statusCache || {}), available: false, paused: true };
+    throw new AIError(data?.error || t('Die KI ist gerade nicht erreichbar.'), res.status);
   }
   if (typeof data.remaining === 'number') statusCache = { ...(statusCache || {}), remaining: data.remaining };
   return data;
@@ -62,17 +67,17 @@ export function ensureConsent() {
   return new Promise((resolve) => {
     let ok = false;
     openModal({
-      title: 'Bevor du die KI nutzt',
+      title: t('Bevor du die KI nutzt'),
       body: html`<div class="stack">
         <ul class="checklist">
-          <li>Deine Frage oder dein Foto wird zur Beantwortung an unseren KI-Anbieter <strong>Anthropic</strong> übertragen. SchoolBuddy speichert sie nicht.</li>
-          <li>Schreib keine persönlichen Daten wie Namen, Adressen oder Telefonnummern in deine Fragen und fotografiere keine Gesichter.</li>
-          <li>Die KI kann sich irren. Prüf wichtige Ergebnisse nach und frag im Zweifel deine Lehrkraft.</li>
-          <li>Bist du jünger als 16, frag bitte vorher deine Eltern.</li>
+          <li>${raw(t('Deine Frage oder dein Foto wird zur Beantwortung an unseren KI-Anbieter <strong>Anthropic</strong> übertragen. Auf dem SchoolBuddy-Server speichern wir sie nicht. Der Chatverlauf bleibt nur auf deinem Gerät, auch mit Konto.'))}</li>
+          <li>${t('Schreib keine persönlichen Daten wie Namen, Adressen oder Telefonnummern in deine Fragen und fotografiere keine Gesichter.')}</li>
+          <li>${t('Die KI kann sich irren. Prüf wichtige Ergebnisse nach und frag im Zweifel deine Lehrkraft.')}</li>
+          <li>${t('Bist du jünger als 16, frag bitte vorher deine Eltern.')}</li>
         </ul>
-        <label class="check-row"><input type="checkbox" data-agree> <span>Ich habe die Hinweise gelesen und bin einverstanden. Unter 16: Meine Eltern sind auch einverstanden.</span></label>
-        <p class="muted small">Mehr dazu in der <a href="datenschutz.html" target="_blank" rel="noopener">Datenschutzerklärung</a>.</p>
-        <button type="button" class="btn primary block" data-ok disabled>Los geht's</button>
+        <label class="check-row"><input type="checkbox" data-agree> <span>${t('Ich habe die Hinweise gelesen und bin einverstanden. Unter 16: Meine Eltern sind auch einverstanden.')}</span></label>
+        <p class="muted small">${raw(t('Mehr dazu in der <a href="{url}" target="_blank" rel="noopener">Datenschutzerklärung</a>.', { url: privacyUrl() }))}</p>
+        <button type="button" class="btn primary block" data-ok disabled>${t('Los geht’s')}</button>
       </div>`,
       onMount(m, close) {
         const box = m.querySelector('[data-agree]');

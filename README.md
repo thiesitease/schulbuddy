@@ -18,8 +18,9 @@ Ziel-Adresse: **https://schoolbuddy.hamburgrissen.de** (Hosting: manitu)
 | Smart Reminders | Benachrichtigungen (Android/Chrome, installierte App) und Kalender-Export (.ics) mit Alarmen |
 | Digital Flashcards | Karteikasten mit 5 Fächern; KI erstellt Karten aus Lernzettel (Text oder Foto) |
 | Goal Setting | Wochen-/Monatsziele (Minuten, Einheiten, Karten, Quizze oder eigenes Ziel) |
-| Konto (optional) | Anmeldung über Microsoft, Google oder Apple; Lerndaten werden zwischen Geräten abgeglichen, mit Konfliktabfrage |
-| Premium | Preisseite (2,99 €/Monat, 19,99 €/Jahr) – Bezahlung noch nicht aktiv |
+| Konto (optional) | Anmeldung über Microsoft, Google oder Apple; Lerndaten werden zwischen Geräten abgeglichen, mit Konfliktabfrage. Der Chatverlauf bleibt auf dem Gerät. |
+| Sprache | Deutsch und Englisch, umschaltbar auf dem Startbildschirm und in den Einstellungen (pro Gerät). Buddy antwortet in der gewählten Sprache. |
+| Premium | Preisseite (2,99 €/Monat, 19,99 €/Jahr) unter `#/premium`, nirgends verlinkt, bis die Bezahlung aktiv ist |
 
 Ohne Konto bleiben alle Lerndaten im Browser des Geräts. Sicherung/Wiederherstellung als JSON in den Einstellungen.
 
@@ -52,6 +53,10 @@ Startet die App auf http://localhost:5173 mit Testantworten statt echter KI (ohn
 ```bash
 npm test
 ```
+
+`npm test` prüft auch die Übersetzung: Die deutschen Texte stehen im Code in `t('…')` und sind zugleich die
+Schlüssel für `public/js/i18n/en.js`. Fehlt dort ein Text oder stimmen die Platzhalter nicht, schlägt der Test fehl.
+Die Rechtstexte gibt es auf Englisch als `privacy.html` und `legal-notice.html`, verbindlich bleibt die deutsche Fassung.
 
 Die API-Tests (Login über einen Test-Anmeldeanbieter, Synchronisierung, KI-Proxy gegen eine Test-Claude-API)
 brauchen PHP 8.1+ mit curl, openssl, mbstring und pdo_sqlite:
@@ -142,6 +147,15 @@ Standardmodell ist `claude-opus-5-5` mit geringer Denktiefe (`effort: low`, beim
 Tageslimits: 25 Anfragen pro Gerät, 150 pro IP (Schul-WLAN), 1.500 insgesamt – einstellbar in der Konfiguration.
 Die Token-Summen des Tages stehen in `usage-JJJJ-MM-TT.json` im `data_dir`. Für deutlich geringere Kosten kann ein
 günstigeres Modell gesetzt werden, z. B. `claude-haiku-5-5`.
+
+**Wochenbudget:** Die KI darf höchstens `ai_budget.eur_per_week` kosten (Standard 7 €), gezählt pro Kalenderwoche
+(Montag bis Sonntag). Weil Anthropic in US-Dollar abrechnet, rechnet die App vorsichtig mit 1 $ = 1 € plus 19 %
+Umsatzsteuer, also mit 5,88 $. Vor jeder Anfrage reserviert `api/lib/Budget.php` den ungünstigsten Preis
+(volle `max_tokens`, dazu ein möglicher Fallback-Versuch zum höchsten Preis), danach wird genau nach `usage`
+abgerechnet, bei Fallbacks pro Versuch zum Preis des jeweiligen Modells (`api/lib/Pricing.php`, Preise unter
+`prices` in `api/lib/common.php`). Reicht der Rest nicht mehr für den ungünstigsten Fall, macht Buddy bis Montag
+Pause. Der Stand der Woche steht in `ai-budget-JJJJ-WKW.json` im `data_dir`. Zusätzlich sollte in der
+Anthropic-Konsole ein monatliches Ausgabenlimit gesetzt sein, als zweite Absicherung.
 
 ## Vor dem Start erledigen
 

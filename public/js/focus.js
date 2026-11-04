@@ -2,13 +2,14 @@
 import { html, icon, openModal } from './ui.js';
 import { sessionTitle } from './components.js';
 import { completeSession } from './actions.js';
+import { t, subjectName } from './i18n.js';
 
 const TIPS = [
-  'Handy auf lautlos und außer Reichweite legen.',
-  'Erklär dir den Stoff laut, als würdest du ihn jemandem beibringen.',
-  'Schreib am Ende drei Dinge auf, die du dir merken willst.',
-  'Nach der Einheit: 5 Minuten Pause, etwas trinken, bewegen.',
-  'Nutze Karteikarten für Begriffe, die du dir merken musst.',
+  t('Handy auf lautlos und außer Reichweite legen.'),
+  t('Erklär dir den Stoff laut, als würdest du ihn jemandem beibringen.'),
+  t('Schreib am Ende drei Dinge auf, die du dir merken willst.'),
+  t('Nach der Einheit: 5 Minuten Pause, etwas trinken, bewegen.'),
+  t('Nutze Karteikarten für Begriffe, die du dir merken musst.'),
 ];
 
 const mmss = (sec) => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
@@ -29,15 +30,15 @@ export function openFocus(task, exam, onDone) {
   };
 
   openModal({
-    title: 'Fokus-Zeit',
+    title: t('Fokus-Zeit'),
     body: html`<div class="focus">
       <p class="focus-task">${sessionTitle(task)}</p>
-      <p class="muted">${exam.subject} · ${task.minutes} Minuten</p>
+      <p class="muted">${subjectName(exam.subject)} · ${t('{n} Minuten', { n: task.minutes })}</p>
       <div class="focus-time" role="timer" aria-live="off">${mmss(total)}</div>
       <div class="bar focus-bar"><span style="width:0%"></span></div>
       <div class="row center">
-        <button type="button" class="btn primary" data-toggle>${icon('play')} Start</button>
-        <button type="button" class="btn ghost" data-done>${icon('check')} Fertig</button>
+        <button type="button" class="btn primary" data-toggle>${icon('play')} ${t('Start')}</button>
+        <button type="button" class="btn ghost" data-done>${icon('check')} ${t('Fertig')}</button>
       </div>
       <p class="tip">${icon('bulb')} ${TIPS[Math.floor(Math.random() * TIPS.length)]}</p>
     </div>`,
@@ -56,7 +57,7 @@ export function openFocus(task, exam, onDone) {
           stop();
           navigator.vibrate?.([200, 100, 200]);
           toggle.hidden = true;
-          m.querySelector('.focus-task').textContent = 'Geschafft! 🎉 Markiere die Einheit als erledigt.';
+          m.querySelector('.focus-task').textContent = t('Geschafft! 🎉 Markiere die Einheit als erledigt.');
         }
       };
       const stop = () => {
@@ -64,7 +65,7 @@ export function openFocus(task, exam, onDone) {
         timer = null;
         wakeLock?.release?.();
         wakeLock = null;
-        toggle.innerHTML = String(html`${icon('play')} Weiter`);
+        toggle.innerHTML = String(html`${icon('play')} ${t('Weiter')}`);
       };
       toggle.addEventListener('click', () => {
         if (timer) {
@@ -74,7 +75,7 @@ export function openFocus(task, exam, onDone) {
         endsAt = Date.now() + remaining * 1000;
         timer = setInterval(tick, 1000);
         lockScreen();
-        toggle.innerHTML = String(html`${icon('pause')} Pause`);
+        toggle.innerHTML = String(html`${icon('pause')} ${t('Pause')}`);
       });
       m.querySelector('[data-done]').addEventListener('click', () => {
         completeSession(task);

@@ -1,4 +1,5 @@
 // Kleine UI-Helfer: sicheres HTML, Icons, Modals, Toasts, Markdown.
+import { t } from './i18n.js';
 
 class Raw {
   constructor(s) {
@@ -95,7 +96,7 @@ export function ring(pct, { size = 64, stroke = 7, label = '' } = {}) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(100, pct));
-  return raw(`<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(label || `${Math.round(p)} Prozent`)}">
+  return raw(`<svg class="ring" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" role="img" aria-label="${esc(label || t('{n} Prozent', { n: Math.round(p) }))}">
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke-width="${stroke}" class="ring-track"/>
     <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke-width="${stroke}" class="ring-value"
       stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - p / 100)}" stroke-linecap="round" transform="rotate(-90 ${size / 2} ${size / 2})"/>
@@ -131,7 +132,7 @@ export function openModal({ title, body, onMount, onClose }) {
   wrap.className = 'modal-backdrop';
   wrap.innerHTML = String(html`<div class="modal" role="dialog" aria-modal="true" aria-label="${title}">
     <div class="modal-head"><h2>${title}</h2>
-      <button type="button" class="icon-btn" data-close aria-label="Schließen">${icon('x')}</button></div>
+      <button type="button" class="icon-btn" data-close aria-label="${t('Schließen')}">${icon('x')}</button></div>
     <div class="modal-body">${body}</div></div>`);
   let closed = false;
   const onKey = (e) => {
@@ -157,13 +158,13 @@ export function openModal({ title, body, onMount, onClose }) {
   return close;
 }
 
-export function confirmDialog(message, { confirmText = 'Löschen', danger = true } = {}) {
+export function confirmDialog(message, { confirmText = t('Löschen'), danger = true } = {}) {
   return new Promise((resolve) => {
     let answer = false;
     openModal({
-      title: 'Sicher?',
+      title: t('Sicher?'),
       body: html`<p>${message}</p><div class="row end">
-        <button type="button" class="btn ghost" data-close>Abbrechen</button>
+        <button type="button" class="btn ghost" data-close>${t('Abbrechen')}</button>
         <button type="button" class="btn ${danger ? 'danger' : 'primary'}" data-ok>${confirmText}</button></div>`,
       onMount(m, close) {
         m.querySelector('[data-ok]').addEventListener('click', () => {
@@ -299,18 +300,19 @@ function loadImage(file) {
       URL.revokeObjectURL(img.src);
       resolve(img);
     };
-    img.onerror = () => reject(new Error('Das Bild konnte nicht gelesen werden.'));
+    img.onerror = () => reject(new Error(t('Das Bild konnte nicht gelesen werden.')));
     img.src = URL.createObjectURL(file);
   });
 }
 
+/** „3 Karten“ bzw. „3 cards“: Einzahl und Mehrzahl werden auf Deutsch übergeben und übersetzt. */
 export function plural(n, one, many) {
-  return `${n} ${n === 1 ? one : many}`;
+  return `${n} ${t(n === 1 ? one : many)}`;
 }
 
 export function formatMinutes(min) {
-  if (min < 60) return `${min} Min.`;
+  if (min < 60) return t('{n} Min.', { n: min });
   const h = Math.floor(min / 60);
   const m = min % 60;
-  return m ? `${h} Std. ${m} Min.` : `${h} Std.`;
+  return m ? t('{h} Std. {m} Min.', { h, m }) : t('{h} Std.', { h });
 }

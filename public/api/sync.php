@@ -23,11 +23,20 @@ try {
     $db = Db::connect($config);
 } catch (Throwable $e) {
     error_log('SchulBuddy: Datenbank nicht erreichbar – ' . $e->getMessage());
-    fail(503, 'Die Synchronisierung ist gerade nicht verfügbar.');
+    fail(503, tr('Die Synchronisierung ist gerade nicht verfügbar.', 'Syncing is not available right now.'));
 }
 $user = Session::user($db);
 if (!$user) {
-    fail(401, 'Bitte melde dich an.', ['auth' => false]);
+    fail(401, tr('Bitte melde dich an.', 'Please sign in.'), ['auth' => false]);
+}
+
+/** Der Chatverlauf bleibt auf dem Gerät. Ältere App-Versionen schicken ihn noch mit. */
+function without_chat(mixed $data): mixed
+{
+    if ($data instanceof stdClass) {
+        unset($data->chat);
+    }
+    return $data;
 }
 
 /** @return array{rev: int, data: mixed, updatedAt: int}|null */
@@ -37,13 +46,13 @@ function current_data(PDO $db, string $userId): ?array
     $stmt->execute([$userId]);
     $row = $stmt->fetch();
     // Als Objekte dekodieren, damit {} nicht zu [] wird.
-    return $row ? ['rev' => (int) $row['rev'], 'data' => json_decode($row['data']), 'updatedAt' => (int) $row['updated_at']] : null;
+    return $row ? ['rev' => (int) $row['rev'], 'data' => without_chat(json_decode($row['data'])), 'updatedAt' => (int) $row['updated_at']] : null;
 }
 
 function conflict(PDO $db, string $userId): never
 {
     $now = current_data($db, $userId) ?? ['rev' => 0, 'data' => null, 'updatedAt' => 0];
-    fail(409, 'Auf einem anderen Gerät wurde inzwischen gespeichert.', ['conflict' => true] + $now);
+    fail(409, tr('Auf einem anderen Gerät wurde inzwischen gespeichert.', 'Another device has saved in the meantime.'), ['conflict' => true] + $now);
 }
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
@@ -53,19 +62,19 @@ if ($method === 'GET') {
 }
 
 if ($method !== 'PUT' && $method !== 'POST') {
-    fail(405, 'Methode nicht erlaubt.');
+    fail(405, tr('Methode nicht erlaubt.', 'Method not allowed.'));
 }
 
 require_same_origin($config);
 $body = read_json_body(MAX_DATA_BYTES + 100_000, false);
 $baseRev = (int) ($body->baseRev ?? -1);
-$data = $body->data ?? null;
+$data = without_chat($body->data ?? null);
 if (!$data instanceof stdClass || $baseRev < 0) {
-    fail(400, 'Ungültige Daten.');
+    fail(400, tr('Ungültige Daten.', 'Invalid data.'));
 }
 $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 if ($json === false || strlen($json) > MAX_DATA_BYTES) {
-    fail(413, 'Deine Daten sind zu groß für die Synchronisierung.');
+    fail(413, tr('Deine Daten sind zu groß für die Synchronisierung.', 'Your data is too large to sync.'));
 }
 
 $now = time();

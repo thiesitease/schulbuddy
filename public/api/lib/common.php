@@ -21,6 +21,17 @@ function sb_config(): array
         'effort' => ['chat' => 'low', 'quiz' => 'low', 'cards' => 'low', 'scan' => 'medium'],
         'max_tokens' => 16000,
         'fallbacks' => true,
+        // Höchstens so viel dürfen die KI-Anfragen pro Kalenderwoche (Montag bis Sonntag) kosten.
+        // Anthropic rechnet in US-Dollar ab; Kurs und Umsatzsteuer sind vorsichtig angesetzt.
+        'ai_budget' => ['eur_per_week' => 7.0, 'eur_per_usd' => 1.0, 'vat' => 0.19],
+        // US-Dollar pro Million Token (Stand: Oktober 2026). Fallback-Versuche kosten den Preis ihres Modells,
+        // Modelle ohne Eintrag den Satz unter '*'. cache_write ist der Preis für Einträge mit 1 Stunde Laufzeit.
+        'prices' => [
+            'claude-opus-5-5' => ['input' => 4.0, 'output' => 20.0, 'cache_write' => 8.0, 'cache_read' => 0.2],
+            'claude-opus-5' => ['input' => 5.0, 'output' => 25.0, 'cache_write' => 10.0, 'cache_read' => 0.5],
+            'claude-opus-4-8' => ['input' => 5.0, 'output' => 25.0, 'cache_write' => 10.0, 'cache_read' => 0.5],
+            '*' => ['input' => 10.0, 'output' => 50.0, 'cache_write' => 20.0, 'cache_read' => 1.0],
+        ],
         'limit_per_device' => 25,
         'limit_per_ip' => 150,
         'limit_global' => 1500,
@@ -76,6 +87,18 @@ function fail(int $status, string $message, array $extra = []): never
     respond($status, ['ok' => false, 'error' => $message] + $extra);
 }
 
+/** Sprache der App ('de' oder 'en'). Die App schickt sie im Header X-SchulBuddy-Lang mit. */
+function app_lang(): string
+{
+    return ($_SERVER['HTTP_X_SCHULBUDDY_LANG'] ?? '') === 'en' ? 'en' : 'de';
+}
+
+/** Meldung in der Sprache der App. */
+function tr(string $de, string $en): string
+{
+    return app_lang() === 'en' ? $en : $de;
+}
+
 /** Kürzt UTF-8-sicher. */
 function cut(string $text, int $max): string
 {
@@ -108,7 +131,7 @@ function require_same_origin(array $config): void
     $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
     $allowed = array_merge([own_origin(), app_url($config)], (array) $config['allowed_origins']);
     if ($origin === '' || !in_array($origin, $allowed, true)) {
-        fail(403, 'Diese Anfrage ist nicht erlaubt.');
+        fail(403, tr('Diese Anfrage ist nicht erlaubt.', 'This request is not allowed.'));
     }
 }
 
@@ -147,11 +170,11 @@ function sb_secret(array $config): string
 function read_json_body(int $maxBytes, bool $assoc = true): array|stdClass
 {
     if ((int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > $maxBytes) {
-        fail(413, 'Die Anfrage ist zu groß.');
+        fail(413, tr('Die Anfrage ist zu groß.', 'The request is too large.'));
     }
     $data = json_decode((string) file_get_contents('php://input'), $assoc);
     if (!is_array($data) && !$data instanceof stdClass) {
-        fail(400, 'Ungültige Anfrage.');
+        fail(400, tr('Ungültige Anfrage.', 'Invalid request.'));
     }
     return $data;
 }

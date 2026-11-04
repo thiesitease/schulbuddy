@@ -1,5 +1,6 @@
-// Alle Daten bleiben auf dem Gerät (localStorage). Es gibt kein Konto und keinen Server-Speicher.
+// Alle Daten liegen auf dem Gerät (localStorage). Mit Konto gleicht account.js sie zusätzlich mit dem Server ab.
 import { todayISO } from './dates.js';
+import { t } from './i18n.js';
 
 const KEY = 'schulbuddy';
 const VERSION = 1;
@@ -116,7 +117,7 @@ export function exportJSON() {
 export function importJSON(text) {
   const data = JSON.parse(text);
   if (!data || !['SchoolBuddy', 'SchulBuddy'].includes(data.app) || !Array.isArray(data.exams)) {
-    throw new Error('Das ist keine SchoolBuddy-Sicherung.');
+    throw new Error(t('Das ist keine SchoolBuddy-Sicherung.'));
   }
   delete data.app;
   delete data.exportedAt;
